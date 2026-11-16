@@ -100,8 +100,7 @@ jobs:
             chmod -R 755 .
             chmod -R 777 apps/api/uploads apps/api/backups
             
-            echo "🔄 Gracefully restarting Fastify & Phusion Passenger..."
-            pkill -f 'dist/server.js' || pkill -f 'src/server.ts' || true
+            echo "🔄 Gracefully restarting Phusion Passenger..."
             touch tmp/restart.txt
             
             echo "✅ Deployment successful! Magora Store is LIVE."
