@@ -1,118 +1,122 @@
 import { sql } from "drizzle-orm";
 import {
-  sqliteTable,
+  mysqlTable,
+  varchar,
   text,
-  integer,
-  real,
+  int,
+  double,
+  boolean,
+  timestamp,
+  json,
   index,
   uniqueIndex,
   primaryKey,
-} from "drizzle-orm/sqlite-core";
+} from "drizzle-orm/mysql-core";
 
 const timestamps = {
-  createdAt: integer("created_at", { mode: "timestamp_ms" })
+  createdAt: timestamp("created_at", { mode: "date", fsp: 3 })
     .notNull()
-    .default(sql`(unixepoch() * 1000)`),
-  updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+    .default(sql`CURRENT_TIMESTAMP(3)`),
+  updatedAt: timestamp("updated_at", { mode: "date", fsp: 3 })
     .notNull()
-    .default(sql`(unixepoch() * 1000)`),
+    .default(sql`CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)`),
 };
 
 /* ───────────── Catalog: brands & phone models ───────────── */
 
-export const brands = sqliteTable("brands", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  slug: text("slug").notNull().unique(),
-  name: text("name").notNull(),
-  sort: integer("sort").notNull().default(0),
-  active: integer("active", { mode: "boolean" }).notNull().default(true),
+export const brands = mysqlTable("brands", {
+  id: int("id").primaryKey().autoincrement(),
+  slug: varchar("slug", { length: 255 }).notNull().unique(),
+  name: varchar("name", { length: 255 }).notNull(),
+  sort: int("sort").notNull().default(0),
+  active: boolean("active").notNull().default(true),
 });
 
 /**
  * One row per phone model. The physical spec (size, corner radius, camera layout)
  * drives the live 3D preview, so a new model only needs a row here — no images.
  */
-export const phoneModels = sqliteTable(
+export const phoneModels = mysqlTable(
   "phone_models",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
-    brandId: integer("brand_id").notNull().references(() => brands.id),
-    slug: text("slug").notNull().unique(),
-    name: text("name").notNull(),
-    year: integer("year").notNull(),
+    id: int("id").primaryKey().autoincrement(),
+    brandId: int("brand_id").notNull().references(() => brands.id),
+    slug: varchar("slug", { length: 255 }).notNull().unique(),
+    name: varchar("name", { length: 255 }).notNull(),
+    year: int("year").notNull(),
     /** Space separated extra search terms: model numbers, short names ("s25u", "A3084") */
-    aliases: text("aliases").notNull().default(""),
+    aliases: varchar("aliases", { length: 500 }).notNull().default(""),
     /** Normalised (lowercase, alphanumeric only) text used by the search endpoint */
-    searchText: text("search_text").notNull().default(""),
-    heightMm: real("height_mm").notNull(),
-    widthMm: real("width_mm").notNull(),
-    depthMm: real("depth_mm").notNull(),
-    cornerRadiusMm: real("corner_radius_mm").notNull(),
+    searchText: text("search_text").notNull(),
+    heightMm: double("height_mm").notNull(),
+    widthMm: double("width_mm").notNull(),
+    depthMm: double("depth_mm").notNull(),
+    cornerRadiusMm: double("corner_radius_mm").notNull(),
     /** JSON — camera layout, see CameraSpec in src/lib/types.ts */
-    camera: text("camera", { mode: "json" }).notNull(),
+    camera: json("camera").notNull(),
     /** JSON — buttons & ports for the 3D model (see PhoneDetails); {} = brand defaults */
-    details: text("details", { mode: "json" }).notNull().default(sql`'{}'`),
+    details: json("details").notNull().$defaultFn(() => ({})),
     /** Body colour of the phone shown under clear cases */
-    bodyHex: text("body_hex").notNull().default("#8a8d91"),
+    bodyHex: varchar("body_hex", { length: 32 }).notNull().default("#8a8d91"),
     /** Price adjustment in minor units for this size class (e.g. Pro Max +300) */
-    priceAdjust: integer("price_adjust").notNull().default(0),
-    popular: integer("popular", { mode: "boolean" }).notNull().default(false),
-    isHero: integer("is_hero", { mode: "boolean" }).notNull().default(false),
+    priceAdjust: int("price_adjust").notNull().default(0),
+    popular: boolean("popular").notNull().default(false),
+    isHero: boolean("is_hero").notNull().default(false),
     model3dUrl: text("model_3d_url"),
-    active: integer("active", { mode: "boolean" }).notNull().default(true),
-    sort: integer("sort").notNull().default(0),
+    active: boolean("active").notNull().default(true),
+    sort: int("sort").notNull().default(0),
   },
   (t) => [index("phone_models_brand_idx").on(t.brandId, t.sort)],
 );
 
-export const categories = sqliteTable("categories", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  slug: text("slug").notNull().unique(),
-  name: text("name").notNull(),
-  description: text("description").notNull().default(""),
+export const categories = mysqlTable("categories", {
+  id: int("id").primaryKey().autoincrement(),
+  slug: varchar("slug", { length: 255 }).notNull().unique(),
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
   /** Which storefront section this category lives in: magsafe-cases | skins | screen-protectors | gadgets */
-  section: text("section").notNull().default("magsafe-cases"),
-  sort: integer("sort").notNull().default(0),
+  section: varchar("section", { length: 64 }).notNull().default("magsafe-cases"),
+  sort: int("sort").notNull().default(0),
 });
 
 /* ───────────── Products & variants ───────────── */
 
-export const products = sqliteTable(
+export const products = mysqlTable(
   "products",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
-    slug: text("slug").notNull().unique(),
-    name: text("name").notNull(),
-    subtitle: text("subtitle").notNull().default(""),
-    description: text("description").notNull().default(""),
-    categoryId: integer("category_id").notNull().references(() => categories.id),
+    id: int("id").primaryKey().autoincrement(),
+    slug: varchar("slug", { length: 255 }).notNull().unique(),
+    name: varchar("name", { length: 255 }).notNull(),
+    subtitle: varchar("subtitle", { length: 255 }).default(""),
+    description: text("description"),
+    categoryId: int("category_id").notNull().references(() => categories.id),
     /** Product brand / company / vendor (e.g. Magora, Casetify, dbrand, Ronin, Spigen, Apple, Samsung) */
-    brand: text("brand").notNull().default("Magora"),
+    brand: varchar("brand", { length: 128 }).notNull().default("Magora"),
     /** clear | frosted | silicone | leather | carbon — selects the 3D material */
-    material: text("material").notNull(),
+    material: varchar("material", { length: 64 }).notNull(),
     /** Prices are stored in minor units? No — PKR has no practical minor unit, so whole rupees. */
-    basePrice: integer("base_price").notNull(),
-    compareAtPrice: integer("compare_at_price"),
+    basePrice: int("base_price").notNull(),
+    compareAtPrice: int("compare_at_price"),
     /** Denormalised for fast listing/sorting without joins */
-    minPrice: integer("min_price").notNull().default(0),
-    badge: text("badge"),
+    minPrice: int("min_price").notNull().default(0),
+    badge: varchar("badge", { length: 64 }),
     /**
      * How the product is shown: { mode: "auto" | "design" | "model" | "photos", first: "3d" | "photos",
      * designUrl?, designFit?: "cover" | "contain" | "logo", modelUrl?, modelBytes? } — see ProductView
      */
-    view: text("view", { mode: "json" }).$type<Record<string, unknown>>().notNull().default(sql`'{}'`),
+    view: json("view").$type<Record<string, unknown>>().notNull().$defaultFn(() => ({})),
     /** Uploaded product photos (URLs). Optional — phone accessories render in 3D without them. */
-    images: text("images", { mode: "json" }).$type<string[]>().notNull().default(sql`'[]'`),
-    features: text("features", { mode: "json" }).$type<string[]>().notNull().default(sql`'[]'`),
-    specs: text("specs", { mode: "json" })
+    images: json("images").$type<string[]>().notNull().$defaultFn(() => []),
+    features: json("features").$type<string[]>().notNull().$defaultFn(() => []),
+    specs: json("specs")
       .$type<{ label: string; value: string }[]>()
       .notNull()
-      .default(sql`'[]'`),
-    ratingAvg: real("rating_avg").notNull().default(0),
-    ratingCount: integer("rating_count").notNull().default(0),
-    soldCount: integer("sold_count").notNull().default(0),
-    featured: integer("featured", { mode: "boolean" }).notNull().default(false),
-    active: integer("active", { mode: "boolean" }).notNull().default(true),
+      .$defaultFn(() => []),
+    ratingAvg: double("rating_avg").notNull().default(0),
+    ratingCount: int("rating_count").notNull().default(0),
+    soldCount: int("sold_count").notNull().default(0),
+    featured: boolean("featured").notNull().default(false),
+    active: boolean("active").notNull().default(true),
     ...timestamps,
   },
   (t) => [
@@ -123,124 +127,104 @@ export const products = sqliteTable(
   ],
 );
 
-export const productColors = sqliteTable(
+export const productColors = mysqlTable(
   "product_colors",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
-    productId: integer("product_id")
+    id: int("id").primaryKey().autoincrement(),
+    productId: int("product_id")
       .notNull()
       .references(() => products.id, { onDelete: "cascade" }),
-    name: text("name").notNull(),
-    hex: text("hex").notNull(),
+    name: varchar("name", { length: 128 }).notNull(),
+    hex: varchar("hex", { length: 32 }).notNull(),
     /** Optional secondary colour (e.g. MagSafe ring / camera ring) */
-    accentHex: text("accent_hex"),
+    accentHex: varchar("accent_hex", { length: 32 }),
     /** Optional print design for this option (flat PNG/JPG), drawn on the 3D case / skin */
     designUrl: text("design_url"),
-    sort: integer("sort").notNull().default(0),
+    sort: int("sort").notNull().default(0),
   },
   (t) => [index("product_colors_product_idx").on(t.productId)],
 );
 
 /** A sellable unit: product × phone model × colour, with its own price & stock */
-export const variants = sqliteTable(
+export const variants = mysqlTable(
   "variants",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
-    productId: integer("product_id")
+    id: int("id").primaryKey().autoincrement(),
+    productId: int("product_id")
       .notNull()
       .references(() => products.id, { onDelete: "cascade" }),
     /** null = universal product (gadgets: chargers, earbuds…) not tied to a phone model */
-    phoneModelId: integer("phone_model_id").references(() => phoneModels.id),
-    colorId: integer("color_id")
+    phoneModelId: int("phone_model_id").references(() => phoneModels.id),
+    colorId: int("color_id")
       .notNull()
       .references(() => productColors.id, { onDelete: "cascade" }),
-    sku: text("sku").notNull().unique(),
-    price: integer("price").notNull(),
-    compareAtPrice: integer("compare_at_price"),
-    stock: integer("stock").notNull().default(0),
-    active: integer("active", { mode: "boolean" }).notNull().default(true),
+    sku: varchar("sku", { length: 128 }).notNull().unique(),
+    price: int("price").notNull(),
+    compareAtPrice: int("compare_at_price"),
+    stock: int("stock").notNull().default(0),
+    active: boolean("active").notNull().default(true),
   },
   (t) => [
     uniqueIndex("variants_combo_uq").on(t.productId, t.phoneModelId, t.colorId),
     index("variants_model_idx").on(t.phoneModelId, t.productId),
-    uniqueIndex("variants_universal_uq").on(t.productId, t.colorId).where(sql`phone_model_id is null`),
   ],
 );
 
 /* ───────────── Customers ───────────── */
 
-export const users = sqliteTable("users", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  name: text("name").notNull(),
-  email: text("email").notNull().unique(),
-  phone: text("phone"),
-  passwordHash: text("password_hash").notNull(),
-  role: text("role").notNull().default("customer"), // customer | admin
+export const users = mysqlTable("users", {
+  id: int("id").primaryKey().autoincrement(),
+  name: varchar("name", { length: 255 }).notNull(),
+  email: varchar("email", { length: 255 }).notNull().unique(),
+  phone: varchar("phone", { length: 64 }),
+  passwordHash: varchar("password_hash", { length: 255 }).notNull(),
+  role: varchar("role", { length: 32 }).notNull().default("customer"), // customer | admin
   ...timestamps,
 });
 
-export const addresses = sqliteTable(
+export const addresses = mysqlTable(
   "addresses",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
-    userId: integer("user_id")
+    id: int("id").primaryKey().autoincrement(),
+    userId: int("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
-    label: text("label").notNull().default("Home"),
-    name: text("name").notNull(),
-    phone: text("phone").notNull(),
-    city: text("city").notNull(),
-    area: text("area"),
+    label: varchar("label", { length: 64 }).notNull().default("Home"),
+    name: varchar("name", { length: 255 }).notNull(),
+    phone: varchar("phone", { length: 64 }).notNull(),
+    city: varchar("city", { length: 128 }).notNull(),
+    area: varchar("area", { length: 255 }),
     line1: text("line1").notNull(),
-    postalCode: text("postal_code"),
-    isDefault: integer("is_default", { mode: "boolean" }).notNull().default(false),
+    postalCode: varchar("postal_code", { length: 32 }),
+    isDefault: boolean("is_default").notNull().default(false),
   },
   (t) => [index("addresses_user_idx").on(t.userId)],
 );
 
-export const wishlist = sqliteTable(
+export const wishlist = mysqlTable(
   "wishlist",
   {
-    userId: integer("user_id")
+    userId: int("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
-    productId: integer("product_id")
+    productId: int("product_id")
       .notNull()
       .references(() => products.id, { onDelete: "cascade" }),
-    createdAt: integer("created_at", { mode: "timestamp_ms" })
+    createdAt: timestamp("created_at", { mode: "date", fsp: 3 })
       .notNull()
-      .default(sql`(unixepoch() * 1000)`),
+      .default(sql`CURRENT_TIMESTAMP(3)`),
   },
   (t) => [primaryKey({ columns: [t.userId, t.productId] })],
 );
 
 /* ───────────── Cart ───────────── */
 
-export const carts = sqliteTable("carts", {
-  id: text("id").primaryKey(), // random token — usable by guests and apps
-  userId: integer("user_id").references(() => users.id, { onDelete: "set null" }),
-  couponCode: text("coupon_code"),
+export const carts = mysqlTable("carts", {
+  id: varchar("id", { length: 64 }).primaryKey(), // random token — usable by guests and apps
+  userId: int("user_id").references(() => users.id, { onDelete: "set null" }),
+  couponCode: varchar("coupon_code", { length: 64 }),
   ...timestamps,
 });
-
-export const cartItems = sqliteTable(
-  "cart_items",
-  {
-    id: integer("id").primaryKey({ autoIncrement: true }),
-    cartId: text("cart_id")
-      .notNull()
-      .references(() => carts.id, { onDelete: "cascade" }),
-    variantId: integer("variant_id")
-      .notNull()
-      .references(() => variants.id, { onDelete: "cascade" }),
-    qty: integer("qty").notNull(),
-    /** Per-item options: skin coverage, custom photo… (null for plain items) */
-    custom: text("custom", { mode: "json" }).$type<ItemCustom | null>(),
-    /** stable key of `custom` so identical items merge (variant + options) */
-    customKey: text("custom_key").notNull().default(""),
-  },
-  (t) => [uniqueIndex("cart_items_uq2").on(t.cartId, t.variantId, t.customKey)],
-);
 
 export interface ItemCustom {
   coverage?: "back" | "back_sides";
@@ -249,62 +233,81 @@ export interface ItemCustom {
   note?: string;
 }
 
-export const coupons = sqliteTable("coupons", {
-  code: text("code").primaryKey(),
-  type: text("type").notNull(), // percent | fixed | free_shipping
-  value: integer("value").notNull().default(0),
-  minSubtotal: integer("min_subtotal").notNull().default(0),
-  maxDiscount: integer("max_discount"),
-  usageLimit: integer("usage_limit"),
-  usedCount: integer("used_count").notNull().default(0),
-  expiresAt: integer("expires_at", { mode: "timestamp_ms" }),
-  active: integer("active", { mode: "boolean" }).notNull().default(true),
+export const cartItems = mysqlTable(
+  "cart_items",
+  {
+    id: int("id").primaryKey().autoincrement(),
+    cartId: varchar("cart_id", { length: 64 })
+      .notNull()
+      .references(() => carts.id, { onDelete: "cascade" }),
+    variantId: int("variant_id")
+      .notNull()
+      .references(() => variants.id, { onDelete: "cascade" }),
+    qty: int("qty").notNull(),
+    /** Per-item options: skin coverage, custom photo… (null for plain items) */
+    custom: json("custom").$type<ItemCustom | null>(),
+    /** stable key of `custom` so identical items merge (variant + options) */
+    customKey: varchar("custom_key", { length: 255 }).notNull().default(""),
+  },
+  (t) => [uniqueIndex("cart_items_uq2").on(t.cartId, t.variantId, t.customKey)],
+);
+
+export const coupons = mysqlTable("coupons", {
+  code: varchar("code", { length: 64 }).primaryKey(),
+  type: varchar("type", { length: 32 }).notNull(), // percent | fixed | free_shipping
+  value: int("value").notNull().default(0),
+  minSubtotal: int("min_subtotal").notNull().default(0),
+  maxDiscount: int("max_discount"),
+  usageLimit: int("usage_limit"),
+  usedCount: int("used_count").notNull().default(0),
+  expiresAt: timestamp("expires_at", { mode: "date", fsp: 3 }),
+  active: boolean("active").notNull().default(true),
 });
 
 /* ───────────── Orders & payments ───────────── */
 
-export const orders = sqliteTable(
+export const orders = mysqlTable(
   "orders",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
-    number: text("number").notNull().unique(),
-    accessToken: text("access_token").notNull(),
-    userId: integer("user_id").references(() => users.id, { onDelete: "set null" }),
-    status: text("status").notNull().default("pending"),
-    paymentMethod: text("payment_method").notNull(),
-    paymentStatus: text("payment_status").notNull().default("unpaid"),
-    customerName: text("customer_name").notNull(),
-    customerPhone: text("customer_phone").notNull(),
-    customerEmail: text("customer_email"),
-    city: text("city").notNull(),
-    area: text("area"),
+    id: int("id").primaryKey().autoincrement(),
+    number: varchar("number", { length: 64 }).notNull().unique(),
+    accessToken: varchar("access_token", { length: 128 }).notNull(),
+    userId: int("user_id").references(() => users.id, { onDelete: "set null" }),
+    status: varchar("status", { length: 64 }).notNull().default("pending"),
+    paymentMethod: varchar("payment_method", { length: 64 }).notNull(),
+    paymentStatus: varchar("payment_status", { length: 64 }).notNull().default("unpaid"),
+    customerName: varchar("customer_name", { length: 255 }).notNull(),
+    customerPhone: varchar("customer_phone", { length: 64 }).notNull(),
+    customerEmail: varchar("customer_email", { length: 255 }),
+    city: varchar("city", { length: 128 }).notNull(),
+    area: varchar("area", { length: 255 }),
     line1: text("line1").notNull(),
-    postalCode: text("postal_code"),
+    postalCode: varchar("postal_code", { length: 32 }),
     notes: text("notes"),
-    subtotal: integer("subtotal").notNull(),
-    discount: integer("discount").notNull().default(0),
-    shipping: integer("shipping").notNull().default(0),
-    codFee: integer("cod_fee").notNull().default(0),
-    total: integer("total").notNull(),
-    couponCode: text("coupon_code"),
-    source: text("source").notNull().default("web"), // web | android | ios | huawei
+    subtotal: int("subtotal").notNull(),
+    discount: int("discount").notNull().default(0),
+    shipping: int("shipping").notNull().default(0),
+    codFee: int("cod_fee").notNull().default(0),
+    total: int("total").notNull(),
+    couponCode: varchar("coupon_code", { length: 64 }),
+    source: varchar("source", { length: 32 }).notNull().default("web"), // web | android | ios | huawei
     /* ── fulfilment (order desk) ── */
     /** customer may open the parcel before paying (printed on the label) */
-    openParcel: integer("open_parcel", { mode: "boolean" }).notNull().default(true),
-    weightGrams: integer("weight_grams"),
-    labelPrintedAt: integer("label_printed_at", { mode: "timestamp_ms" }),
-    packedAt: integer("packed_at", { mode: "timestamp_ms" }),
-    shippedAt: integer("shipped_at", { mode: "timestamp_ms" }),
-    deliveredAt: integer("delivered_at", { mode: "timestamp_ms" }),
+    openParcel: boolean("open_parcel").notNull().default(true),
+    weightGrams: int("weight_grams"),
+    labelPrintedAt: timestamp("label_printed_at", { mode: "date", fsp: 3 }),
+    packedAt: timestamp("packed_at", { mode: "date", fsp: 3 }),
+    shippedAt: timestamp("shipped_at", { mode: "date", fsp: 3 }),
+    deliveredAt: timestamp("delivered_at", { mode: "date", fsp: 3 }),
     /* ── returns ── */
-    returnedAt: integer("returned_at", { mode: "timestamp_ms" }),
+    returnedAt: timestamp("returned_at", { mode: "date", fsp: 3 }),
     /** rto = came back from the courier (refused / not delivered) · customer = returned after delivery */
-    returnType: text("return_type"),
-    returnReason: text("return_reason"),
+    returnType: varchar("return_type", { length: 64 }),
+    returnReason: varchar("return_reason", { length: 255 }),
     /** what the return cost us (courier return charges etc.) */
-    returnCost: integer("return_cost").notNull().default(0),
+    returnCost: int("return_cost").notNull().default(0),
     /** when we sent the "rate your order" link */
-    reviewRequestedAt: integer("review_requested_at", { mode: "timestamp_ms" }),
+    reviewRequestedAt: timestamp("review_requested_at", { mode: "date", fsp: 3 }),
     ...timestamps,
   },
   (t) => [
@@ -315,59 +318,59 @@ export const orders = sqliteTable(
   ],
 );
 
-export const orderItems = sqliteTable(
+export const orderItems = mysqlTable(
   "order_items",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
-    orderId: integer("order_id")
+    id: int("id").primaryKey().autoincrement(),
+    orderId: int("order_id")
       .notNull()
       .references(() => orders.id, { onDelete: "cascade" }),
-    variantId: integer("variant_id").references(() => variants.id, { onDelete: "set null" }),
-    productId: integer("product_id"),
-    productSlug: text("product_slug").notNull(),
-    productName: text("product_name").notNull(),
-    modelName: text("model_name").notNull(),
-    colorName: text("color_name").notNull(),
-    colorHex: text("color_hex").notNull(),
-    sku: text("sku").notNull(),
-    unitPrice: integer("unit_price").notNull(),
-    qty: integer("qty").notNull(),
-    lineTotal: integer("line_total").notNull(),
-    category: text("category").notNull().default("magsafe-cases"),
-    material: text("material"),
-    custom: text("custom", { mode: "json" }).$type<ItemCustom | null>(),
+    variantId: int("variant_id").references(() => variants.id, { onDelete: "set null" }),
+    productId: int("product_id"),
+    productSlug: varchar("product_slug", { length: 255 }).notNull(),
+    productName: varchar("product_name", { length: 255 }).notNull(),
+    modelName: varchar("model_name", { length: 255 }).notNull(),
+    colorName: varchar("color_name", { length: 128 }).notNull(),
+    colorHex: varchar("color_hex", { length: 32 }).notNull(),
+    sku: varchar("sku", { length: 128 }).notNull(),
+    unitPrice: int("unit_price").notNull(),
+    qty: int("qty").notNull(),
+    lineTotal: int("line_total").notNull(),
+    category: varchar("category", { length: 64 }).notNull().default("magsafe-cases"),
+    material: varchar("material", { length: 64 }),
+    custom: json("custom").$type<ItemCustom | null>(),
   },
   (t) => [index("order_items_order_idx").on(t.orderId)],
 );
 
-export const orderEvents = sqliteTable(
+export const orderEvents = mysqlTable(
   "order_events",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
-    orderId: integer("order_id")
+    id: int("id").primaryKey().autoincrement(),
+    orderId: int("order_id")
       .notNull()
       .references(() => orders.id, { onDelete: "cascade" }),
-    status: text("status").notNull(),
+    status: varchar("status", { length: 64 }).notNull(),
     note: text("note"),
-    createdAt: integer("created_at", { mode: "timestamp_ms" })
+    createdAt: timestamp("created_at", { mode: "date", fsp: 3 })
       .notNull()
-      .default(sql`(unixepoch() * 1000)`),
+      .default(sql`CURRENT_TIMESTAMP(3)`),
   },
   (t) => [index("order_events_order_idx").on(t.orderId)],
 );
 
-export const payments = sqliteTable(
+export const payments = mysqlTable(
   "payments",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
-    orderId: integer("order_id")
+    id: int("id").primaryKey().autoincrement(),
+    orderId: int("order_id")
       .notNull()
       .references(() => orders.id, { onDelete: "cascade" }),
-    provider: text("provider").notNull(),
-    amount: integer("amount").notNull(),
-    status: text("status").notNull().default("pending"), // pending | paid | failed | refunded
-    reference: text("reference"),
-    payload: text("payload", { mode: "json" }),
+    provider: varchar("provider", { length: 64 }).notNull(),
+    amount: int("amount").notNull(),
+    status: varchar("status", { length: 64 }).notNull().default("pending"), // pending | paid | failed | refunded
+    reference: varchar("reference", { length: 255 }),
+    payload: json("payload"),
     ...timestamps,
   },
   (t) => [index("payments_order_idx").on(t.orderId)],
@@ -375,122 +378,126 @@ export const payments = sqliteTable(
 
 /* ───────────── Reviews ───────────── */
 
-export const reviews = sqliteTable(
+export const reviews = mysqlTable(
   "reviews",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
-    productId: integer("product_id")
+    id: int("id").primaryKey().autoincrement(),
+    productId: int("product_id")
       .notNull()
       .references(() => products.id, { onDelete: "cascade" }),
-    userId: integer("user_id").references(() => users.id, { onDelete: "set null" }),
-    name: text("name").notNull(),
-    rating: integer("rating").notNull(),
-    title: text("title"),
+    userId: int("user_id").references(() => users.id, { onDelete: "set null" }),
+    name: varchar("name", { length: 255 }).notNull(),
+    rating: int("rating").notNull(),
+    title: varchar("title", { length: 255 }),
     body: text("body").notNull(),
-    verified: integer("verified", { mode: "boolean" }).notNull().default(false),
-    approved: integer("approved", { mode: "boolean" }).notNull().default(false),
+    verified: boolean("verified").notNull().default(false),
+    approved: boolean("approved").notNull().default(false),
     /** set when the review came from the "rate your order" link → verified buyer */
-    orderId: integer("order_id").references(() => orders.id, { onDelete: "set null" }),
-    photos: text("photos", { mode: "json" }).$type<string[]>().notNull().default(sql`'[]'`),
+    orderId: int("order_id").references(() => orders.id, { onDelete: "set null" }),
+    photos: json("photos").$type<string[]>().notNull().$defaultFn(() => []),
     /** the store's public answer under the review */
     adminReply: text("admin_reply"),
-    createdAt: integer("created_at", { mode: "timestamp_ms" })
+    createdAt: timestamp("created_at", { mode: "date", fsp: 3 })
       .notNull()
-      .default(sql`(unixepoch() * 1000)`),
+      .default(sql`CURRENT_TIMESTAMP(3)`),
   },
   (t) => [
     index("reviews_product_idx").on(t.productId, t.approved, t.createdAt),
-    uniqueIndex("reviews_order_product_uq").on(t.orderId, t.productId).where(sql`order_id is not null`),
+    uniqueIndex("reviews_order_product_uq").on(t.orderId, t.productId),
   ],
 );
 
 /* ───────────── Shipping & live tracking ───────────── */
 
 /** One shipment per order. Updated by admin, courier webhooks/sync, or the rider's phone. */
-export const shipments = sqliteTable(
+export const shipments = mysqlTable(
   "shipments",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
-    orderId: integer("order_id")
+    id: int("id").primaryKey().autoincrement(),
+    orderId: int("order_id")
       .notNull()
       .unique()
       .references(() => orders.id, { onDelete: "cascade" }),
-    courier: text("courier").notNull().default("own"), // own | tcs | leopards | postex | trax | mnp | callcourier
-    trackingNumber: text("tracking_number"),
-    status: text("status").notNull().default("booked"),
-    etaAt: integer("eta_at", { mode: "timestamp_ms" }),
-    riderName: text("rider_name"),
-    riderPhone: text("rider_phone"),
+    courier: varchar("courier", { length: 64 }).notNull().default("own"), // own | tcs | leopards | postex | trax | mnp | callcourier
+    trackingNumber: varchar("tracking_number", { length: 128 }),
+    status: varchar("status", { length: 64 }).notNull().default("booked"),
+    etaAt: timestamp("eta_at", { mode: "date", fsp: 3 }),
+    riderName: varchar("rider_name", { length: 255 }),
+    riderPhone: varchar("rider_phone", { length: 64 }),
     /** secret link token for the rider's phone page (/rider/<token>) */
-    riderToken: text("rider_token").notNull().unique(),
-    lastLat: real("last_lat"),
-    lastLng: real("last_lng"),
-    lastLocationAt: integer("last_location_at", { mode: "timestamp_ms" }),
-    currentLocation: text("current_location"),
+    riderToken: varchar("rider_token", { length: 128 }).notNull().unique(),
+    lastLat: double("last_lat"),
+    lastLng: double("last_lng"),
+    lastLocationAt: timestamp("last_location_at", { mode: "date", fsp: 3 }),
+    currentLocation: varchar("current_location", { length: 255 }),
     ...timestamps,
   },
   (t) => [index("shipments_tracking_idx").on(t.courier, t.trackingNumber)],
 );
 
-export const shipmentEvents = sqliteTable(
+export const shipmentEvents = mysqlTable(
   "shipment_events",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
-    shipmentId: integer("shipment_id")
+    id: int("id").primaryKey().autoincrement(),
+    shipmentId: int("shipment_id")
       .notNull()
       .references(() => shipments.id, { onDelete: "cascade" }),
-    status: text("status").notNull(),
-    location: text("location"),
+    status: varchar("status", { length: 64 }).notNull(),
+    location: varchar("location", { length: 255 }),
     note: text("note"),
-    lat: real("lat"),
-    lng: real("lng"),
-    source: text("source").notNull().default("admin"), // admin | courier | rider
-    at: integer("at", { mode: "timestamp_ms" })
+    lat: double("lat"),
+    lng: double("lng"),
+    source: varchar("source", { length: 32 }).notNull().default("admin"), // admin | courier | rider
+    at: timestamp("at", { mode: "date", fsp: 3 })
       .notNull()
-      .default(sql`(unixepoch() * 1000)`),
+      .default(sql`CURRENT_TIMESTAMP(3)`),
   },
   (t) => [index("shipment_events_ship_idx").on(t.shipmentId, t.at)],
 );
 
 /* ───────────── Returns & exchanges ───────────── */
 
-export const returnRequests = sqliteTable(
+export const returnRequests = mysqlTable(
   "return_requests",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
-    number: text("number").notNull().unique(),
-    orderId: integer("order_id")
+    id: int("id").primaryKey().autoincrement(),
+    number: varchar("number", { length: 64 }).notNull().unique(),
+    orderId: int("order_id")
       .notNull()
       .references(() => orders.id, { onDelete: "cascade" }),
-    userId: integer("user_id").references(() => users.id, { onDelete: "set null" }),
+    userId: int("user_id").references(() => users.id, { onDelete: "set null" }),
     /** requested | approved | rejected | pickup_scheduled | received | refunded | exchanged | closed */
-    status: text("status").notNull().default("requested"),
-    resolution: text("resolution").notNull(), // refund | exchange
-    reason: text("reason").notNull(),
+    status: varchar("status", { length: 64 }).notNull().default("requested"),
+    resolution: varchar("resolution", { length: 64 }).notNull(), // refund | exchange
+    reason: varchar("reason", { length: 255 }).notNull(),
     details: text("details"),
-    items: text("items", { mode: "json" }).$type<{ orderItemId: number; qty: number }[]>().notNull(),
+    items: json("items").$type<{ orderItemId: number; qty: number }[]>().notNull(),
     /** for exchange: the phone model / colour the customer wants instead */
     exchangeNote: text("exchange_note"),
-    refundAmount: integer("refund_amount").notNull().default(0),
-    refundMethod: text("refund_method"), // e.g. "JazzCash 0300…", "Bank IBAN …"
+    refundAmount: int("refund_amount").notNull().default(0),
+    refundMethod: varchar("refund_method", { length: 255 }), // e.g. "JazzCash 0300…", "Bank IBAN …"
     adminNote: text("admin_note"),
     ...timestamps,
   },
-  (t) => [index("returns_order_idx").on(t.orderId), index("returns_status_idx").on(t.status, t.createdAt), index("returns_user_idx").on(t.userId)],
+  (t) => [
+    index("returns_order_idx").on(t.orderId),
+    index("returns_status_idx").on(t.status, t.createdAt),
+    index("returns_user_idx").on(t.userId),
+  ],
 );
 
-export const returnEvents = sqliteTable(
+export const returnEvents = mysqlTable(
   "return_events",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
-    returnId: integer("return_id")
+    id: int("id").primaryKey().autoincrement(),
+    returnId: int("return_id")
       .notNull()
       .references(() => returnRequests.id, { onDelete: "cascade" }),
-    status: text("status").notNull(),
+    status: varchar("status", { length: 64 }).notNull(),
     note: text("note"),
-    createdAt: integer("created_at", { mode: "timestamp_ms" })
+    createdAt: timestamp("created_at", { mode: "date", fsp: 3 })
       .notNull()
-      .default(sql`(unixepoch() * 1000)`),
+      .default(sql`CURRENT_TIMESTAMP(3)`),
   },
   (t) => [index("return_events_ret_idx").on(t.returnId)],
 );
@@ -498,120 +505,115 @@ export const returnEvents = sqliteTable(
 /* ───────────── COD safety & stock alerts (v8) ───────────── */
 
 /** Numbers that may not place cash-on-delivery orders (fake / refused orders) */
-export const blockedPhones = sqliteTable("blocked_phones", {
-  phone: text("phone").primaryKey(),
-  reason: text("reason"),
-  createdAt: integer("created_at", { mode: "timestamp_ms" })
+export const blockedPhones = mysqlTable("blocked_phones", {
+  phone: varchar("phone", { length: 64 }).primaryKey(),
+  reason: varchar("reason", { length: 255 }),
+  createdAt: timestamp("created_at", { mode: "date", fsp: 3 })
     .notNull()
-    .default(sql`(unixepoch() * 1000)`),
+    .default(sql`CURRENT_TIMESTAMP(3)`),
 });
 
 /** "Notify me when back in stock" requests */
-export const stockAlerts = sqliteTable(
+export const stockAlerts = mysqlTable(
   "stock_alerts",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
-    productId: integer("product_id")
+    id: int("id").primaryKey().autoincrement(),
+    productId: int("product_id")
       .notNull()
       .references(() => products.id, { onDelete: "cascade" }),
-    colorId: integer("color_id").references(() => productColors.id, { onDelete: "cascade" }),
-    phoneModelId: integer("phone_model_id").references(() => phoneModels.id, { onDelete: "cascade" }),
-    phone: text("phone").notNull(),
-    name: text("name"),
-    notifiedAt: integer("notified_at", { mode: "timestamp_ms" }),
-    createdAt: integer("created_at", { mode: "timestamp_ms" })
+    colorId: int("color_id").references(() => productColors.id, { onDelete: "cascade" }),
+    phoneModelId: int("phone_model_id").references(() => phoneModels.id, { onDelete: "cascade" }),
+    phone: varchar("phone", { length: 64 }).notNull(),
+    name: varchar("name", { length: 255 }),
+    notifiedAt: timestamp("notified_at", { mode: "date", fsp: 3 }),
+    createdAt: timestamp("created_at", { mode: "date", fsp: 3 })
       .notNull()
-      .default(sql`(unixepoch() * 1000)`),
+      .default(sql`CURRENT_TIMESTAMP(3)`),
   },
   (t) => [index("stock_alerts_product_idx").on(t.productId, t.notifiedAt)],
 );
 
 /* ───────────── Product Brands / Companies (Casetify, dbrand, Ronin, Spigen, etc.) ───────────── */
-export const productBrands = sqliteTable("product_brands", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  slug: text("slug").notNull().unique(),
-  name: text("name").notNull(),
-  description: text("description").notNull().default(""),
-  website: text("website"),
-  sort: integer("sort").notNull().default(0),
-  active: integer("active", { mode: "boolean" }).notNull().default(true),
+export const productBrands = mysqlTable("product_brands", {
+  id: int("id").primaryKey().autoincrement(),
+  slug: varchar("slug", { length: 255 }).notNull().unique(),
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  website: varchar("website", { length: 255 }),
+  sort: int("sort").notNull().default(0),
+  active: boolean("active").notNull().default(true),
 });
 
 /* ───────────── Custom Styles & Materials (Cases, Skins, Protectors, Gadgets) ───────────── */
-export const customStyles = sqliteTable("custom_styles", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  slug: text("slug").notNull().unique(),
-  name: text("name").notNull(),
-  section: text("section").notNull().default("magsafe-cases"),
-  hint: text("hint").notNull().default(""),
-  color: text("color").notNull().default("#1f2024"),
-  accent: text("accent"),
-  sort: integer("sort").notNull().default(0),
-  active: integer("active", { mode: "boolean" }).notNull().default(true),
+export const customStyles = mysqlTable("custom_styles", {
+  id: int("id").primaryKey().autoincrement(),
+  slug: varchar("slug", { length: 255 }).notNull().unique(),
+  name: varchar("name", { length: 255 }).notNull(),
+  section: varchar("section", { length: 64 }).notNull().default("magsafe-cases"),
+  hint: varchar("hint", { length: 255 }).notNull().default(""),
+  color: varchar("color", { length: 32 }).notNull().default("#1f2024"),
+  accent: varchar("accent", { length: 32 }),
+  sort: int("sort").notNull().default(0),
+  active: boolean("active").notNull().default(true),
 });
 
 /* ───────────── Trust Signals & Social Proof Popups (Custom + Real) ───────────── */
-export const trustSignals = sqliteTable("trust_signals", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  city: text("city").notNull(),
-  productName: text("product_name").notNull(),
-  productSlug: text("product_slug").notNull(),
-  material: text("material").default("clear"),
-  colorHex: text("color_hex").notNull().default("#1f2024"),
-  modelName: text("model_name"),
-  timeAgoText: text("time_ago_text").notNull().default("Just now"),
-  active: integer("active", { mode: "boolean" }).notNull().default(true),
-  sort: integer("sort").notNull().default(0),
-  createdAt: integer("created_at", { mode: "timestamp_ms" })
+export const trustSignals = mysqlTable("trust_signals", {
+  id: int("id").primaryKey().autoincrement(),
+  city: varchar("city", { length: 128 }).notNull(),
+  productName: varchar("product_name", { length: 255 }).notNull(),
+  productSlug: varchar("product_slug", { length: 255 }).notNull(),
+  material: varchar("material", { length: 64 }).default("clear"),
+  colorHex: varchar("color_hex", { length: 32 }).notNull().default("#1f2024"),
+  modelName: varchar("model_name", { length: 255 }),
+  timeAgoText: varchar("time_ago_text", { length: 64 }).notNull().default("Just now"),
+  active: boolean("active").notNull().default(true),
+  sort: int("sort").notNull().default(0),
+  createdAt: timestamp("created_at", { mode: "date", fsp: 3 })
     .notNull()
-    .default(sql`(unixepoch() * 1000)`),
+    .default(sql`CURRENT_TIMESTAMP(3)`),
 });
 
-export const trustSettings = sqliteTable("trust_settings", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  key: text("key").notNull().unique(),
-  value: text("value", { mode: "json" }).notNull(),
+export const trustSettings = mysqlTable("trust_settings", {
+  id: int("id").primaryKey().autoincrement(),
+  key: varchar("key", { length: 128 }).notNull().unique(),
+  value: json("value").notNull(),
 });
 
 /* ───────────── Web Push Notifications Subscriptions ───────────── */
-export const pushSubscriptions = sqliteTable("push_subscriptions", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  endpoint: text("endpoint").notNull().unique(),
-  p256dh: text("p256dh").notNull(),
-  auth: text("auth").notNull(),
-  phone: text("phone"),
-  userId: integer("user_id").references(() => users.id, { onDelete: "set null" }),
-  cartId: text("cart_id"),
+export const pushSubscriptions = mysqlTable("push_subscriptions", {
+  id: int("id").primaryKey().autoincrement(),
+  endpoint: varchar("endpoint", { length: 500 }).notNull().unique(),
+  p256dh: varchar("p256dh", { length: 255 }).notNull(),
+  auth: varchar("auth", { length: 255 }).notNull(),
+  phone: varchar("phone", { length: 64 }),
+  userId: int("user_id").references(() => users.id, { onDelete: "set null" }),
+  cartId: varchar("cart_id", { length: 64 }),
   deviceInfo: text("device_info"),
-  createdAt: integer("created_at", { mode: "timestamp_ms" })
+  createdAt: timestamp("created_at", { mode: "date", fsp: 3 })
     .notNull()
-    .default(sql`(unixepoch() * 1000)`),
-  lastNotifiedAt: integer("last_notified_at", { mode: "timestamp_ms" }),
+    .default(sql`CURRENT_TIMESTAMP(3)`),
+  lastNotifiedAt: timestamp("last_notified_at", { mode: "date", fsp: 3 }),
 });
 
 /* ───────────── Customer Behavioral Leads & WhatsApp CRM ───────────── */
-export const customerLeads = sqliteTable("customer_leads", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  phone: text("phone").notNull(),
-  name: text("name"),
-  email: text("email"),
-  city: text("city"),
-  source: text("source").notNull().default("lead_popup"), // lead_popup | cart_abandoned | checkout | whatsapp_community | back_in_stock
-  preferredModel: text("preferred_model"),
+export const customerLeads = mysqlTable("customer_leads", {
+  id: int("id").primaryKey().autoincrement(),
+  phone: varchar("phone", { length: 64 }).notNull(),
+  name: varchar("name", { length: 255 }),
+  email: varchar("email", { length: 255 }),
+  city: varchar("city", { length: 128 }),
+  source: varchar("source", { length: 64 }).notNull().default("lead_popup"), // lead_popup | cart_abandoned | checkout | whatsapp_community | back_in_stock
+  preferredModel: varchar("preferred_model", { length: 255 }),
   interests: text("interests"),
-  cartValue: integer("cart_value").default(0),
+  cartValue: int("cart_value").default(0),
   cartItemsSummary: text("cart_items_summary"),
   lastVisitedPage: text("last_visited_page"),
-  visitCount: integer("visit_count").notNull().default(1),
-  convertedOrder: integer("converted_order", { mode: "boolean" }).notNull().default(false),
-  whatsappCommunityOptIn: integer("whatsapp_community_opt_in", { mode: "boolean" }).notNull().default(true),
+  visitCount: int("visit_count").notNull().default(1),
+  convertedOrder: boolean("converted_order").notNull().default(false),
+  whatsappCommunityOptIn: boolean("whatsapp_community_opt_in").notNull().default(true),
   notes: text("notes"),
-  createdAt: integer("created_at", { mode: "timestamp_ms" })
-    .notNull()
-    .default(sql`(unixepoch() * 1000)`),
-  updatedAt: integer("updated_at", { mode: "timestamp_ms" })
-    .notNull()
-    .default(sql`(unixepoch() * 1000)`),
+  ...timestamps,
 });
 
 /* ───────────── TikTok / Instagram Shoppable Reels ───────────── */
@@ -627,32 +629,25 @@ export interface ReelComment {
   verifiedBuyer?: boolean;
 }
 
-export const shoppableReels = sqliteTable("shoppable_reels", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  title: text("title").notNull(),
+export const shoppableReels = mysqlTable("shoppable_reels", {
+  id: int("id").primaryKey().autoincrement(),
+  title: varchar("title", { length: 255 }).notNull(),
   caption: text("caption"),
   videoUrl: text("video_url").notNull(),
   thumbnailUrl: text("thumbnail_url"),
-  productId: integer("product_id").references(() => products.id, { onDelete: "set null" }),
-  productName: text("product_name"),
-  productPrice: integer("product_price"),
-  productCompareAtPrice: integer("product_compare_at_price"),
-  productSlug: text("product_slug"),
+  productId: int("product_id").references(() => products.id, { onDelete: "set null" }),
+  productName: varchar("product_name", { length: 255 }),
+  productPrice: int("product_price"),
+  productCompareAtPrice: int("product_compare_at_price"),
+  productSlug: varchar("product_slug", { length: 255 }),
   productImage: text("product_image"),
-  phoneModel: text("phone_model"),
-  likesCount: integer("likes_count").notNull().default(18500),
-  viewsCount: integer("views_count").notNull().default(45200),
-  commentsCount: integer("comments_count").notNull().default(64),
-  sharesCount: integer("shares_count").notNull().default(2300),
-  comments: text("comments", { mode: "json" }).$type<ReelComment[]>().notNull().default(sql`'[]'`),
-  active: integer("active", { mode: "boolean" }).notNull().default(true),
-  sort: integer("sort").notNull().default(0),
-  createdAt: integer("created_at", { mode: "timestamp_ms" })
-    .notNull()
-    .default(sql`(unixepoch() * 1000)`),
-  updatedAt: integer("updated_at", { mode: "timestamp_ms" })
-    .notNull()
-    .default(sql`(unixepoch() * 1000)`),
+  phoneModel: varchar("phone_model", { length: 255 }),
+  likesCount: int("likes_count").notNull().default(18500),
+  viewsCount: int("views_count").notNull().default(45200),
+  commentsCount: int("comments_count").notNull().default(64),
+  sharesCount: int("shares_count").notNull().default(2300),
+  comments: json("comments").$type<ReelComment[]>().notNull().$defaultFn(() => []),
+  active: boolean("active").notNull().default(true),
+  sort: int("sort").notNull().default(0),
+  ...timestamps,
 });
-
-

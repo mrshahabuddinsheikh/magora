@@ -26,10 +26,12 @@ await runMigrations(join(dirname(fileURLToPath(import.meta.url)), "../../drizzle
 
 /* brands */
 for (const b of brandSeeds) {
-  await db.insert(s.brands).values(b).onConflictDoUpdate({
-    target: s.brands.slug,
-    set: { name: b.name, sort: b.sort },
-  });
+  const [existing] = await db.select().from(s.brands).where(eq(s.brands.slug, b.slug));
+  if (existing) {
+    await db.update(s.brands).set({ name: b.name, sort: b.sort }).where(eq(s.brands.id, existing.id));
+  } else {
+    await db.insert(s.brands).values(b);
+  }
 }
 const brandRows = await db.select().from(s.brands);
 const brandBySlug = new Map(brandRows.map((b) => [b.slug, b]));
@@ -56,15 +58,24 @@ for (const p of phones) {
     popular: p.popular ?? false,
     sort: sort++,
   };
-  if (reset) await db.insert(s.phoneModels).values(row).onConflictDoUpdate({ target: s.phoneModels.slug, set: row });
-  else await db.insert(s.phoneModels).values(row).onConflictDoNothing();
+  const [existingModel] = await db.select().from(s.phoneModels).where(eq(s.phoneModels.slug, p.slug));
+  if (existingModel) {
+    if (reset) await db.update(s.phoneModels).set(row).where(eq(s.phoneModels.id, existingModel.id));
+  } else {
+    await db.insert(s.phoneModels).values(row);
+  }
 }
 const models = await db.select().from(s.phoneModels);
 console.log(`✓ ${brandRows.length} brands, ${models.length} phone models`);
 
 /* categories */
 for (const c of categorySeeds) {
-  await db.insert(s.categories).values(c).onConflictDoUpdate({ target: s.categories.slug, set: { name: c.name, section: c.section, description: c.description, sort: c.sort } });
+  const [existingCat] = await db.select().from(s.categories).where(eq(s.categories.slug, c.slug));
+  if (existingCat) {
+    await db.update(s.categories).set({ name: c.name, section: c.section, description: c.description, sort: c.sort }).where(eq(s.categories.id, existingCat.id));
+  } else {
+    await db.insert(s.categories).values(c);
+  }
 }
 const categoryRows = await db.select().from(s.categories);
 const categoryBySlug = new Map(categoryRows.map((c) => [c.slug, c]));
@@ -91,9 +102,16 @@ async function upsertProduct(p: (typeof productSeeds)[number], opts: { modelIds?
     features: p.features,
     specs: p.specs,
   };
-  const [prod] = reset
-    ? await db.insert(s.products).values(values).onConflictDoUpdate({ target: s.products.slug, set: { ...values, updatedAt: new Date() } }).returning()
-    : (await db.insert(s.products).values(values).onConflictDoNothing().returning()).concat(await db.select().from(s.products).where(eq(s.products.slug, p.slug))).slice(0, 1);
+
+  let prod: typeof s.products.$inferSelect;
+  const [existingProd] = await db.select().from(s.products).where(eq(s.products.slug, p.slug));
+  if (existingProd) {
+    if (reset) await db.update(s.products).set({ ...values, updatedAt: new Date() }).where(eq(s.products.id, existingProd.id));
+    prod = (await db.select().from(s.products).where(eq(s.products.id, existingProd.id)))[0];
+  } else {
+    const [insertProd] = await db.insert(s.products).values(values);
+    prod = (await db.select().from(s.products).where(eq(s.products.id, insertProd.insertId)))[0];
+  }
 
   const existingColors = await db.select().from(s.productColors).where(eq(s.productColors.productId, prod.id));
   const colorIds: number[] = [];
@@ -106,8 +124,8 @@ async function upsertProduct(p: (typeof productSeeds)[number], opts: { modelIds?
       await db.update(s.productColors).set({ hex: c.hex, accentHex: c.accentHex ?? null, sort: i }).where(eq(s.productColors.id, found.id));
       colorIds.push(found.id);
     } else {
-      const [row] = await db.insert(s.productColors).values({ productId: prod.id, name: c.name, hex: c.hex, accentHex: c.accentHex ?? null, sort: i }).returning();
-      colorIds.push(row.id);
+      const [insertCol] = await db.insert(s.productColors).values({ productId: prod.id, name: c.name, hex: c.hex, accentHex: c.accentHex ?? null, sort: i });
+      colorIds.push(insertCol.insertId);
     }
   }
 
@@ -149,14 +167,17 @@ async function upsertProduct(p: (typeof productSeeds)[number], opts: { modelIds?
     }
   }
   for (let i = 0; i < rows.length; i += 200) {
-    await db
-      .insert(s.variants)
-      .values(rows.slice(i, i + 200))
-      .onConflictDoUpdate({
-        target: [s.variants.productId, s.variants.phoneModelId, s.variants.colorId],
-        // keep admin-edited prices unless --reset
-        set: reset ? { price: sql`excluded.price`, compareAtPrice: sql`excluded.compare_at_price` } : { sku: sql`${s.variants.sku}` },
-      });
+    const chunk = rows.slice(i, i + 200);
+    for (const r of chunk) {
+      const [ex] = await db.select({ id: s.variants.id }).from(s.variants).where(
+        and(eq(s.variants.productId, r.productId), eq(s.variants.phoneModelId, r.phoneModelId), eq(s.variants.colorId, r.colorId))
+      );
+      if (!ex) {
+        await db.insert(s.variants).values(r);
+      } else if (reset) {
+        await db.update(s.variants).set({ price: r.price, compareAtPrice: r.compareAtPrice }).where(eq(s.variants.id, ex.id));
+      }
+    }
   }
   return prod;
 }
@@ -187,7 +208,10 @@ if (bulk > 0) {
 }
 
 /* coupons */
-for (const c of couponSeeds) await db.insert(s.coupons).values(c).onConflictDoNothing();
+for (const c of couponSeeds) {
+  const [existingC] = await db.select().from(s.coupons).where(eq(s.coupons.code, c.code));
+  if (!existingC) await db.insert(s.coupons).values(c);
+}
 
 /* admin user */
 const adminEmail = (process.env.ADMIN_EMAIL ?? "admin@magora.pk").toLowerCase();

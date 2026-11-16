@@ -103,7 +103,7 @@ export async function returnRoutes(app: FastifyInstance) {
         if (!oi || it.qty > oi.qty) throw badRequest("Invalid item selection");
         refund += oi.unitPrice * it.qty;
       }
-      const [created] = await db
+      const [insertRes] = await db
         .insert(s.returnRequests)
         .values({
           number: `TMP-${Date.now()}`,
@@ -116,13 +116,13 @@ export async function returnRoutes(app: FastifyInstance) {
           refundMethod: b.refundMethod ?? null,
           items: b.items,
           refundAmount: b.resolution === "refund" ? refund : 0,
-        })
-        .returning();
-      const num = `RT${10000 + created.id}`;
-      await db.update(s.returnRequests).set({ number: num }).where(eq(s.returnRequests.id, created.id));
-      await db.insert(s.returnEvents).values({ returnId: created.id, status: "requested", note: b.reason });
+        });
+      const returnId = insertRes.insertId;
+      const num = `RT${10000 + returnId}`;
+      await db.update(s.returnRequests).set({ number: num }).where(eq(s.returnRequests.id, returnId));
+      await db.insert(s.returnEvents).values({ returnId, status: "requested", note: b.reason });
       reply.code(201);
-      return { data: presentReturn((await loadReturn(eq(s.returnRequests.id, created.id)))!) };
+      return { data: presentReturn((await loadReturn(eq(s.returnRequests.id, returnId)))!) };
     },
   );
 

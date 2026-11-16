@@ -53,7 +53,7 @@ export async function pushRoutes(app: FastifyInstance) {
         return { data: { id: existing[0].id, status: "updated" } };
       }
 
-      const [created] = await db
+      const [insertRes] = await db
         .insert(s.pushSubscriptions)
         .values({
           endpoint: b.endpoint,
@@ -63,11 +63,10 @@ export async function pushRoutes(app: FastifyInstance) {
           cartId: b.cartId || null,
           deviceInfo: b.deviceInfo || null,
           userId: (req as any).user?.id || null,
-        })
-        .returning();
+        });
 
       reply.code(201);
-      return { data: { id: created.id, status: "subscribed" } };
+      return { data: { id: insertRes.insertId, status: "subscribed" } };
     }
   );
 

@@ -87,9 +87,13 @@ jobs:
             echo "📦 Installing production dependencies..."
             npm install --omit=dev --no-audit --prefer-offline || npm install
             
+            echo "🌱 Seeding initial MySQL data (idempotent safe)..."
+            npm run db:seed -w @magora/api || true
+            npm run db:reviews -w @magora/api || true
+            
             echo "🔒 Setting production permissions..."
             chmod -R 755 .
-            chmod -R 777 apps/api/data apps/api/uploads apps/api/backups
+            chmod -R 777 apps/api/uploads apps/api/backups
             
             echo "🔄 Gracefully restarting Phusion Passenger..."
             touch tmp/restart.txt

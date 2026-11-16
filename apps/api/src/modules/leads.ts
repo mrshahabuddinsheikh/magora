@@ -68,7 +68,7 @@ export async function leadsRoutes(app: FastifyInstance) {
       }
 
       // Insert new lead
-      const [created] = await db
+      const [insertRes] = await db
         .insert(s.customerLeads)
         .values({
           phone,
@@ -83,11 +83,10 @@ export async function leadsRoutes(app: FastifyInstance) {
           lastVisitedPage: b.lastVisitedPage?.trim() || null,
           whatsappCommunityOptIn: b.whatsappCommunityOptIn !== false,
           notes: b.notes?.trim() || null,
-        })
-        .returning();
+        });
 
       reply.code(201);
-      return { data: { id: created.id, phone, status: "created" } };
+      return { data: { id: insertRes.insertId, phone, status: "created" } };
     }
   );
 

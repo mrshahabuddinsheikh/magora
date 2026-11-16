@@ -238,13 +238,17 @@ export async function cartRoutes(app: FastifyInstance) {
       const [cart] = await db.select({ id: s.carts.id }).from(s.carts).where(eq(s.carts.id, cartId));
       if (!cart) throw notFound("Cart");
       const clean = custom && (custom.coverage || custom.imageUrl || custom.note) ? custom : null;
-      await db
-        .insert(s.cartItems)
-        .values({ cartId, variantId, qty: Math.min(qty, v.stock), custom: clean, customKey: customKey(clean) })
-        .onConflictDoUpdate({
-          target: [s.cartItems.cartId, s.cartItems.variantId, s.cartItems.customKey],
-          set: { qty: sql`min(${s.cartItems.qty} + ${qty}, ${Math.min(v.stock, 20)})` },
-        });
+      const key = customKey(clean);
+      const [existingItem] = await db
+        .select()
+        .from(s.cartItems)
+        .where(and(eq(s.cartItems.cartId, cartId), eq(s.cartItems.variantId, variantId), eq(s.cartItems.customKey, key)));
+      if (existingItem) {
+        const newQty = Math.min(existingItem.qty + qty, Math.min(v.stock, 20));
+        await db.update(s.cartItems).set({ qty: newQty }).where(eq(s.cartItems.id, existingItem.id));
+      } else {
+        await db.insert(s.cartItems).values({ cartId, variantId, qty: Math.min(qty, v.stock), custom: clean, customKey: key });
+      }
       await touch(cartId);
       return { data: await computeCart(cartId) };
     },

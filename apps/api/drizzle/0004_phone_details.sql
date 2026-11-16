@@ -1,1 +1,0 @@
-ALTER TABLE `phone_models` ADD `details` text DEFAULT '{}' NOT NULL;

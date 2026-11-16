@@ -331,11 +331,12 @@ export async function deskRoutes(app: FastifyInstance) {
           await db.insert(s.shipmentEvents).values({ shipmentId: sh.id, status: "returned_to_sender", location: "Warehouse", note: b.reason, source: "admin" });
         }
         if (b.restock !== false) await restock(o.id);
-        if (b.block)
-          await db
-            .insert(s.blockedPhones)
-            .values({ phone: o.customerPhone, reason: `Returned #${o.number}: ${b.reason}` })
-            .onConflictDoNothing();
+        if (b.block) {
+          const [alreadyBlocked] = await db.select().from(s.blockedPhones).where(eq(s.blockedPhones.phone, o.customerPhone));
+          if (!alreadyBlocked) {
+            await db.insert(s.blockedPhones).values({ phone: o.customerPhone, reason: `Returned #${o.number}: ${b.reason}` });
+          }
+        }
         done.push(o.number);
       }
       invalidate("catalog:product");

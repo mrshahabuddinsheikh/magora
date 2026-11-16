@@ -133,10 +133,10 @@ export async function upsertShipment(
   if (existing) {
     await db.update(s.shipments).set(values).where(eq(s.shipments.id, existing.shipment.id));
   } else {
-    const [sh] = await db
+    const [insertRes] = await db
       .insert(s.shipments)
-      .values({ orderId: order.id, riderToken: nanoid(28), etaAt: defaultEta(order.city), ...values })
-      .returning();
+      .values({ orderId: order.id, riderToken: nanoid(28), etaAt: defaultEta(order.city), ...values });
+    const [sh] = await db.select().from(s.shipments).where(eq(s.shipments.id, insertRes.insertId));
     await addShipmentEvent(sh, order, { status: "booked", location: "Warehouse", source: "admin", note: getCourier(sh.courier)?.name });
   }
   return (await loadShipment(order.id))!;

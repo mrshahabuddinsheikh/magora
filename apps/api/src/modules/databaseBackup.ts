@@ -40,15 +40,15 @@ export async function databaseBackupRoutes(app: FastifyInstance) {
 
     // Query table counts safely
     const [orders, products, variants, customers, leads, reels, reviews, returns, coupons] = await Promise.all([
-      client.execute("SELECT count(*) as count FROM orders").then((r) => Number(r.rows[0]?.count || 0)).catch(() => 0),
-      client.execute("SELECT count(*) as count FROM products").then((r) => Number(r.rows[0]?.count || 0)).catch(() => 0),
-      client.execute("SELECT count(*) as count FROM variants").then((r) => Number(r.rows[0]?.count || 0)).catch(() => 0),
-      client.execute("SELECT count(*) as count FROM users").then((r) => Number(r.rows[0]?.count || 0)).catch(() => 0),
-      client.execute("SELECT count(*) as count FROM customer_leads").then((r) => Number(r.rows[0]?.count || 0)).catch(() => 0),
-      client.execute("SELECT count(*) as count FROM shoppable_reels").then((r) => Number(r.rows[0]?.count || 0)).catch(() => 0),
-      client.execute("SELECT count(*) as count FROM reviews").then((r) => Number(r.rows[0]?.count || 0)).catch(() => 0),
-      client.execute("SELECT count(*) as count FROM return_requests").then((r) => Number(r.rows[0]?.count || 0)).catch(() => 0),
-      client.execute("SELECT count(*) as count FROM coupons").then((r) => Number(r.rows[0]?.count || 0)).catch(() => 0),
+      client.execute("SELECT count(*) as count FROM orders").then((r) => Number((r.rows[0] as any)?.count || 0)).catch(() => 0),
+      client.execute("SELECT count(*) as count FROM products").then((r) => Number((r.rows[0] as any)?.count || 0)).catch(() => 0),
+      client.execute("SELECT count(*) as count FROM variants").then((r) => Number((r.rows[0] as any)?.count || 0)).catch(() => 0),
+      client.execute("SELECT count(*) as count FROM users").then((r) => Number((r.rows[0] as any)?.count || 0)).catch(() => 0),
+      client.execute("SELECT count(*) as count FROM customer_leads").then((r) => Number((r.rows[0] as any)?.count || 0)).catch(() => 0),
+      client.execute("SELECT count(*) as count FROM shoppable_reels").then((r) => Number((r.rows[0] as any)?.count || 0)).catch(() => 0),
+      client.execute("SELECT count(*) as count FROM reviews").then((r) => Number((r.rows[0] as any)?.count || 0)).catch(() => 0),
+      client.execute("SELECT count(*) as count FROM return_requests").then((r) => Number((r.rows[0] as any)?.count || 0)).catch(() => 0),
+      client.execute("SELECT count(*) as count FROM coupons").then((r) => Number((r.rows[0] as any)?.count || 0)).catch(() => 0),
     ]);
 
     // List server backups
@@ -230,7 +230,8 @@ export async function databaseBackupRoutes(app: FastifyInstance) {
       // Verify restored database integrity
       try {
         const check = await client.execute("PRAGMA integrity_check");
-        const res = check.rows[0]?.[0] || check.rows[0]?.integrity_check;
+        const row = check.rows[0] as any;
+        const res = row?.[0] || row?.integrity_check || "ok";
         if (res !== "ok") {
           // Auto rollback
           if (existsSync(rollbackPath)) {
@@ -247,11 +248,13 @@ export async function databaseBackupRoutes(app: FastifyInstance) {
         const parsed = JSON.parse(buf.toString("utf-8"));
         const tables = parsed.tables || parsed;
         
-        await client.execute("PRAGMA foreign_keys = OFF");
+        try {
+          await client.execute("SET FOREIGN_KEY_CHECKS = 0;");
+        } catch {}
         for (const [tbl, rows] of Object.entries(tables)) {
           if (!Array.isArray(rows) || rows.length === 0) continue;
-          // Verify table exists
-          const checkTable = await client.execute(`SELECT name FROM sqlite_master WHERE type='table' AND name='${tbl.replace(/'/g, "")}'`);
+          // Verify table exists in MySQL / information_schema
+          const checkTable = await client.execute(`SELECT table_name as name FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = '${tbl.replace(/'/g, "")}'`);
           if (checkTable.rows.length === 0) continue;
 
           await client.execute(`DELETE FROM ${tbl}`);
@@ -265,7 +268,9 @@ export async function databaseBackupRoutes(app: FastifyInstance) {
             });
           }
         }
-        await client.execute("PRAGMA foreign_keys = ON");
+        try {
+          await client.execute("SET FOREIGN_KEY_CHECKS = 1;");
+        } catch {}
       } catch (err: unknown) {
         // Rollback from snapshot
         if (existsSync(rollbackPath)) {
@@ -281,10 +286,10 @@ export async function databaseBackupRoutes(app: FastifyInstance) {
 
     // Fetch updated stats
     const [ordersCnt, productsCnt, leadsCnt, reelsCnt] = await Promise.all([
-      client.execute("SELECT count(*) as count FROM orders").then((r) => Number(r.rows[0]?.count || 0)).catch(() => 0),
-      client.execute("SELECT count(*) as count FROM products").then((r) => Number(r.rows[0]?.count || 0)).catch(() => 0),
-      client.execute("SELECT count(*) as count FROM customer_leads").then((r) => Number(r.rows[0]?.count || 0)).catch(() => 0),
-      client.execute("SELECT count(*) as count FROM shoppable_reels").then((r) => Number(r.rows[0]?.count || 0)).catch(() => 0),
+      client.execute("SELECT count(*) as count FROM orders").then((r) => Number((r.rows[0] as any)?.count || 0)).catch(() => 0),
+      client.execute("SELECT count(*) as count FROM products").then((r) => Number((r.rows[0] as any)?.count || 0)).catch(() => 0),
+      client.execute("SELECT count(*) as count FROM customer_leads").then((r) => Number((r.rows[0] as any)?.count || 0)).catch(() => 0),
+      client.execute("SELECT count(*) as count FROM shoppable_reels").then((r) => Number((r.rows[0] as any)?.count || 0)).catch(() => 0),
     ]);
 
     return {

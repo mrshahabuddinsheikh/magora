@@ -83,14 +83,14 @@ export async function reelRoutes(app: FastifyInstance) {
     },
     async (req) => {
       const { id } = req.params as { id: number };
-      const [row] = await db
+      await db
         .update(s.shoppableReels)
         .set({
           likesCount: sql`${s.shoppableReels.likesCount} + 1`,
           updatedAt: new Date(),
         })
-        .where(eq(s.shoppableReels.id, id))
-        .returning();
+        .where(eq(s.shoppableReels.id, id));
+      const [row] = await db.select().from(s.shoppableReels).where(eq(s.shoppableReels.id, id));
 
       if (!row) throw notFound("Reel");
       return { data: { id: row.id, likesCount: row.likesCount } };
@@ -139,15 +139,15 @@ export async function reelRoutes(app: FastifyInstance) {
 
       const comments = Array.isArray(row.comments) ? [...row.comments, newComment] : [newComment];
 
-      const [updated] = await db
+      await db
         .update(s.shoppableReels)
         .set({
           comments,
           commentsCount: comments.length,
           updatedAt: new Date(),
         })
-        .where(eq(s.shoppableReels.id, id))
-        .returning();
+        .where(eq(s.shoppableReels.id, id));
+      const [updated] = await db.select().from(s.shoppableReels).where(eq(s.shoppableReels.id, id));
 
       return { data: updated };
     },
@@ -205,7 +205,7 @@ export async function reelRoutes(app: FastifyInstance) {
 
       if (!b.title || !b.videoUrl) throw badRequest("Title and Video URL are required");
 
-      const [created] = await db
+      const [createdRes] = await db
         .insert(s.shoppableReels)
         .values({
           title: b.title.trim(),
@@ -224,8 +224,8 @@ export async function reelRoutes(app: FastifyInstance) {
           sharesCount: b.sharesCount ?? 1200,
           active: b.active ?? true,
           sort: b.sort ?? 0,
-        })
-        .returning();
+        });
+      const [created] = await db.select().from(s.shoppableReels).where(eq(s.shoppableReels.id, createdRes.insertId));
 
       reply.code(201);
       return { data: created };
@@ -265,14 +265,14 @@ export async function reelRoutes(app: FastifyInstance) {
         sort: number;
       }>;
 
-      const [updated] = await db
+      await db
         .update(s.shoppableReels)
         .set({
           ...b,
           updatedAt: new Date(),
         })
-        .where(eq(s.shoppableReels.id, id))
-        .returning();
+        .where(eq(s.shoppableReels.id, id));
+      const [updated] = await db.select().from(s.shoppableReels).where(eq(s.shoppableReels.id, id));
 
       if (!updated) throw notFound("Reel");
       return { data: updated };
@@ -292,8 +292,9 @@ export async function reelRoutes(app: FastifyInstance) {
     },
     async (req) => {
       const { id } = req.params as { id: number };
-      const [deleted] = await db.delete(s.shoppableReels).where(eq(s.shoppableReels.id, id)).returning();
-      if (!deleted) throw notFound("Reel");
+      const [existing] = await db.select().from(s.shoppableReels).where(eq(s.shoppableReels.id, id));
+      if (!existing) throw notFound("Reel");
+      await db.delete(s.shoppableReels).where(eq(s.shoppableReels.id, id));
       return { data: { success: true, id } };
     },
   );

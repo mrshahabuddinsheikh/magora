@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { Type } from "typebox";
-import { and, inArray, asc, avg, count, desc, eq, gte, like, lte, ne, or, sql, type SQL } from "drizzle-orm";
+import { and, inArray, isNull, asc, avg, count, desc, eq, gte, like, lte, ne, or, sql, type SQL } from "drizzle-orm";
 import { db } from "../db/client";
 import * as s from "../db/schema";
 import { requireAdmin } from "../lib/auth";
@@ -68,7 +68,7 @@ export async function adminRoutes(app: FastifyInstance) {
     since14.setHours(0, 0, 0, 0);
     const [daily, byStatus, top, openReturns, onRoad] = await Promise.all([
       db
-        .select({ day: sql<string>`date(${s.orders.createdAt} / 1000, 'unixepoch', '+5 hours')`, orders: count(), revenue: sql<number>`coalesce(sum(${s.orders.total}),0)` })
+        .select({ day: sql<string>`DATE_FORMAT(CONVERT_TZ(${s.orders.createdAt}, '+00:00', '+05:00'), '%Y-%m-%d')`, orders: count(), revenue: sql<number>`coalesce(sum(${s.orders.total}),0)` })
         .from(s.orders)
         .where(and(gte(s.orders.createdAt, since14), live))
         .groupBy(sql`1`),
@@ -485,19 +485,19 @@ export async function adminRoutes(app: FastifyInstance) {
       if (!universal && !use.length) throw badRequest("No valid phone models selected");
 
       const product = await db.transaction(async (tx) => {
-        const [p] = await tx
+        const [insertProd] = await tx
           .insert(s.products)
           .values({
             slug, name: b.name, brand: b.brand?.trim() || "Magora", subtitle: b.subtitle ?? "", description: b.description ?? "", categoryId: cat.id, material: b.material,
             basePrice: b.basePrice, compareAtPrice: b.compareAtPrice ?? null, badge: b.badge ?? null, featured: b.featured ?? false,
             active: b.active ?? true, features: b.features ?? [], minPrice: b.basePrice,
             images: b.images ?? [], specs: b.specs ?? [], view: b.view ?? {},
-          })
-          .returning();
-        const colors = await tx
-          .insert(s.productColors)
-          .values(b.colors.map((c, i) => ({ productId: p.id, name: c.name, hex: c.hex, accentHex: c.accentHex ?? null, designUrl: c.designUrl ?? null, sort: i })))
-          .returning();
+          });
+        const [p] = await tx.select().from(s.products).where(eq(s.products.id, insertProd.insertId));
+        for (const [i, c] of b.colors.entries()) {
+          await tx.insert(s.productColors).values({ productId: p.id, name: c.name, hex: c.hex, accentHex: c.accentHex ?? null, designUrl: c.designUrl ?? null, sort: i });
+        }
+        const colors = await tx.select().from(s.productColors).where(eq(s.productColors.productId, p.id)).orderBy(s.productColors.sort);
         const add = (i: number) => b.colors[i]?.priceAdd ?? 0;
         const rows = universal
           ? colors.map((c, i) => ({
@@ -536,7 +536,8 @@ export async function adminRoutes(app: FastifyInstance) {
         if ((to.section === "gadgets") !== (from?.section === "gadgets")) throw badRequest("A gadget can't be moved to a phone category (or back). Duplicate it into the new category instead.");
         b.categoryId = to.id;
       }
-      const [p] = await db.update(s.products).set({ ...b, updatedAt: new Date() }).where(eq(s.products.id, id)).returning();
+      await db.update(s.products).set({ ...b, updatedAt: new Date() }).where(eq(s.products.id, id));
+      const [p] = await db.select().from(s.products).where(eq(s.products.id, id));
       // base price change → shift every variant by the same amount
       if (b.basePrice && b.basePrice !== before.basePrice) {
         const delta = b.basePrice - before.basePrice;
@@ -604,7 +605,18 @@ export async function adminRoutes(app: FastifyInstance) {
           price: price + adj(m.priceAdjust), compareAtPrice: compareAt ? compareAt + adj(m.priceAdjust) : null, stock,
         }))
       : [{ productId, phoneModelId: null, colorId, sku: `${productId}-U-${colorId}`, price, compareAtPrice: compareAt, stock }];
-    for (let i = 0; i < rows.length; i += 200) await db.insert(s.variants).values(rows.slice(i, i + 200)).onConflictDoNothing();
+    for (let i = 0; i < rows.length; i += 200) {
+      const chunk = rows.slice(i, i + 200);
+      for (const r of chunk) {
+        const cond = and(
+          eq(s.variants.productId, r.productId),
+          r.phoneModelId !== null ? eq(s.variants.phoneModelId, r.phoneModelId) : isNull(s.variants.phoneModelId),
+          eq(s.variants.colorId, r.colorId)
+        );
+        const [ex] = await db.select({ id: s.variants.id }).from(s.variants).where(cond);
+        if (!ex) await db.insert(s.variants).values(r);
+      }
+    }
   }
 
   app.post(
@@ -629,10 +641,10 @@ export async function adminRoutes(app: FastifyInstance) {
       const { id } = req.params as { id: number };
       const b = req.body as { name: string; hex: string; accentHex?: string | null; priceAdd?: number; stock?: number; designUrl?: string | null };
       const d = await editorDetail(id);
-      const [c] = await db
+      const [insertRes] = await db
         .insert(s.productColors)
-        .values({ productId: id, name: b.name, hex: b.hex, accentHex: b.accentHex ?? null, designUrl: b.designUrl ?? null, sort: d.options.length })
-        .returning();
+        .values({ productId: id, name: b.name, hex: b.hex, accentHex: b.accentHex ?? null, designUrl: b.designUrl ?? null, sort: d.options.length });
+      const [c] = await db.select().from(s.productColors).where(eq(s.productColors.id, insertRes.insertId));
       const universal = d.section === "gadgets";
       const modelIds = universal
         ? null
@@ -747,11 +759,13 @@ export async function adminRoutes(app: FastifyInstance) {
     if (!p) throw notFound("Product");
     const { id: _old, slug, createdAt, updatedAt, soldCount, ratingAvg, ratingCount, ...rest } = p;
     const copy = await db.transaction(async (tx) => {
-      const [np] = await tx.insert(s.products).values({ ...rest, slug: `${slug}-copy-${Date.now().toString(36)}`, name: `${p.name} (copy)`, active: false, featured: false }).returning();
+      const [insertNp] = await tx.insert(s.products).values({ ...rest, slug: `${slug}-copy-${Date.now().toString(36)}`, name: `${p.name} (copy)`, active: false, featured: false });
+      const [np] = await tx.select().from(s.products).where(eq(s.products.id, insertNp.insertId));
       const colors = await tx.select().from(s.productColors).where(eq(s.productColors.productId, id));
       const vs = await tx.select().from(s.variants).where(eq(s.variants.productId, id));
       for (const c of colors) {
-        const [nc] = await tx.insert(s.productColors).values({ productId: np.id, name: c.name, hex: c.hex, accentHex: c.accentHex, designUrl: c.designUrl, sort: c.sort }).returning();
+        const [insertNc] = await tx.insert(s.productColors).values({ productId: np.id, name: c.name, hex: c.hex, accentHex: c.accentHex, designUrl: c.designUrl, sort: c.sort });
+        const [nc] = await tx.select().from(s.productColors).where(eq(s.productColors.id, insertNc.insertId));
         const rows = vs
           .filter((v) => v.colorId === c.id)
           .map((v) => ({ productId: np.id, phoneModelId: v.phoneModelId, colorId: nc.id, sku: v.sku.replace(/^\d+-/, `${np.id}-`).replace(/-\d+$/, `-${nc.id}`), price: v.price, compareAtPrice: v.compareAtPrice, stock: v.stock, active: v.active }));
@@ -781,7 +795,8 @@ export async function adminRoutes(app: FastifyInstance) {
     },
     async (req) => {
       const { id } = req.params as { id: number };
-      const [v] = await db.update(s.variants).set(req.body as object).where(eq(s.variants.id, id)).returning();
+      await db.update(s.variants).set(req.body as object).where(eq(s.variants.id, id));
+      const [v] = await db.select().from(s.variants).where(eq(s.variants.id, id));
       if (!v) throw notFound("Variant");
       await refreshMinPrice(v.productId);
       const [p] = await db.select({ slug: s.products.slug }).from(s.products).where(eq(s.products.id, v.productId));
@@ -830,15 +845,15 @@ export async function adminRoutes(app: FastifyInstance) {
       if (b.isHero) {
         await db.update(s.phoneModels).set({ isHero: false });
       }
-      const [m] = await db
+      const [insertM] = await db
         .insert(s.phoneModels)
         .values({
           brandId: brand.id, slug: slugify(b.name), name: b.name, year: b.year, aliases: b.aliases ?? "",
           searchText: phoneSearchText(b.name, brand.name, b.aliases ?? ""), heightMm: b.heightMm, widthMm: b.widthMm, depthMm: b.depthMm,
           cornerRadiusMm: b.cornerRadiusMm, camera: b.camera, details: b.details ?? {}, bodyHex: b.bodyHex ?? "#8a8d91", priceAdjust: b.priceAdjust ?? 0,
           popular: b.popular ?? false, isHero: b.isHero ?? false, model3dUrl: b.model3dUrl ?? null, sort: -b.year,
-        })
-        .returning();
+        });
+      const [m] = await db.select().from(s.phoneModels).where(eq(s.phoneModels.id, insertM.insertId));
       if (b.addToAllProducts) {
         // gadgets are universal — only phone-fitted products get variants for the new model
         const prods = (
@@ -918,7 +933,8 @@ export async function adminRoutes(app: FastifyInstance) {
       if (b.aliases !== undefined || b.name !== undefined) {
         set.searchText = phoneSearchText(b.name ?? m.phone_models.name, m.brands.name, b.aliases ?? m.phone_models.aliases);
       }
-      const [row] = await db.update(s.phoneModels).set(set).where(eq(s.phoneModels.id, id)).returning();
+      await db.update(s.phoneModels).set(set).where(eq(s.phoneModels.id, id));
+      const [row] = await db.select().from(s.phoneModels).where(eq(s.phoneModels.id, id));
       await catalogChanged();
       return { data: row };
     },
@@ -933,7 +949,8 @@ export async function adminRoutes(app: FastifyInstance) {
       const [m] = await db.select().from(s.phoneModels).where(eq(s.phoneModels.id, id));
       if (!m) throw notFound("Phone model");
       await db.update(s.phoneModels).set({ isHero: false });
-      const [updated] = await db.update(s.phoneModels).set({ isHero: true }).where(eq(s.phoneModels.id, id)).returning();
+      await db.update(s.phoneModels).set({ isHero: true }).where(eq(s.phoneModels.id, id));
+      const [updated] = await db.select().from(s.phoneModels).where(eq(s.phoneModels.id, id));
       await catalogChanged();
       return { data: updated };
     },
@@ -945,9 +962,10 @@ export async function adminRoutes(app: FastifyInstance) {
     { schema: { tags, security, params: Type.Object({ id: Type.Integer() }) } },
     async (req) => {
       const { id } = req.params as { id: number };
-      await db.delete(s.variants).where(eq(s.variants.phoneModelId, id));
-      const [deleted] = await db.delete(s.phoneModels).where(eq(s.phoneModels.id, id)).returning();
+      const [deleted] = await db.select().from(s.phoneModels).where(eq(s.phoneModels.id, id));
       if (!deleted) throw notFound("Phone model");
+      await db.delete(s.variants).where(eq(s.variants.phoneModelId, id));
+      await db.delete(s.phoneModels).where(eq(s.phoneModels.id, id));
       await catalogChanged();
       return { data: { ok: true, deleted } };
     },
@@ -957,7 +975,9 @@ export async function adminRoutes(app: FastifyInstance) {
     "/coupons/:code",
     { schema: { tags, security, params: Type.Object({ code: Type.String() }), body: Type.Object({ active: Type.Optional(Type.Boolean()), usageLimit: Type.Optional(Type.Union([Type.Integer(), Type.Null()])) }) } },
     async (req) => {
-      const [c] = await db.update(s.coupons).set(req.body as object).where(eq(s.coupons.code, (req.params as { code: string }).code)).returning();
+      const { code } = req.params as { code: string };
+      await db.update(s.coupons).set(req.body as object).where(eq(s.coupons.code, code));
+      const [c] = await db.select().from(s.coupons).where(eq(s.coupons.code, code));
       if (!c) throw notFound("Coupon");
       return { data: c };
     },
@@ -1000,7 +1020,8 @@ export async function adminRoutes(app: FastifyInstance) {
       if (b.approved !== undefined) set.approved = b.approved;
       if (b.adminReply !== undefined) set.adminReply = b.adminReply?.trim() || null;
       if (!Object.keys(set).length) throw badRequest("Nothing to change");
-      const [r] = await db.update(s.reviews).set(set).where(eq(s.reviews.id, id)).returning();
+      await db.update(s.reviews).set(set).where(eq(s.reviews.id, id));
+      const [r] = await db.select().from(s.reviews).where(eq(s.reviews.id, id));
       if (!r) throw notFound("Review");
       await refreshRating(r.productId);
       await catalogChanged();
@@ -1010,8 +1031,11 @@ export async function adminRoutes(app: FastifyInstance) {
 
   app.delete("/reviews/:id", { schema: { tags, security, params: Type.Object({ id: Type.Integer() }) } }, async (req) => {
     const { id } = req.params as { id: number };
-    const [r] = await db.delete(s.reviews).where(eq(s.reviews.id, id)).returning();
-    if (r) await refreshRating(r.productId);
+    const [r] = await db.select().from(s.reviews).where(eq(s.reviews.id, id));
+    if (r) {
+      await db.delete(s.reviews).where(eq(s.reviews.id, id));
+      await refreshRating(r.productId);
+    }
     return { data: { ok: true } };
   });
 
@@ -1038,8 +1062,15 @@ export async function adminRoutes(app: FastifyInstance) {
     },
     async (req, reply) => {
       const b = req.body as { code: string; expiresAt?: string } & Omit<typeof s.coupons.$inferInsert, "code" | "expiresAt">;
-      const values = { ...b, code: b.code.toUpperCase(), expiresAt: b.expiresAt ? new Date(b.expiresAt) : null };
-      const [c] = await db.insert(s.coupons).values(values).onConflictDoUpdate({ target: s.coupons.code, set: values }).returning();
+      const upperCode = b.code.toUpperCase();
+      const values = { ...b, code: upperCode, expiresAt: b.expiresAt ? new Date(b.expiresAt) : null };
+      const [existing] = await db.select().from(s.coupons).where(eq(s.coupons.code, upperCode));
+      if (existing) {
+        await db.update(s.coupons).set(values).where(eq(s.coupons.code, upperCode));
+      } else {
+        await db.insert(s.coupons).values(values);
+      }
+      const [c] = await db.select().from(s.coupons).where(eq(s.coupons.code, upperCode));
       reply.code(201);
       return { data: c };
     },
@@ -1103,7 +1134,7 @@ export async function adminRoutes(app: FastifyInstance) {
     async (req, reply) => {
       const b = req.body as { name: string; slug?: string; description?: string; website?: string; sort?: number; active?: boolean };
       const slug = b.slug ? slugify(b.slug) : slugify(b.name);
-      const [brand] = await db
+      const [insertBrand] = await db
         .insert(s.productBrands)
         .values({
           name: b.name,
@@ -1112,8 +1143,8 @@ export async function adminRoutes(app: FastifyInstance) {
           website: b.website ?? null,
           sort: b.sort ?? 0,
           active: b.active ?? true,
-        })
-        .returning();
+        });
+      const [brand] = await db.select().from(s.productBrands).where(eq(s.productBrands.id, insertBrand.insertId));
       reply.code(201);
       return { data: brand };
     },
@@ -1137,7 +1168,8 @@ export async function adminRoutes(app: FastifyInstance) {
     },
     async (req) => {
       const { id } = req.params as { id: number };
-      const [brand] = await db.update(s.productBrands).set(req.body as any).where(eq(s.productBrands.id, id)).returning();
+      await db.update(s.productBrands).set(req.body as any).where(eq(s.productBrands.id, id));
+      const [brand] = await db.select().from(s.productBrands).where(eq(s.productBrands.id, id));
       if (!brand) throw notFound("Brand");
       return { data: brand };
     },
@@ -1145,8 +1177,9 @@ export async function adminRoutes(app: FastifyInstance) {
 
   app.delete("/product-brands/:id", { schema: { tags, security, params: Type.Object({ id: Type.Integer() }) } }, async (req) => {
     const { id } = req.params as { id: number };
-    const [brand] = await db.delete(s.productBrands).where(eq(s.productBrands.id, id)).returning();
+    const [brand] = await db.select().from(s.productBrands).where(eq(s.productBrands.id, id));
     if (!brand) throw notFound("Brand");
+    await db.delete(s.productBrands).where(eq(s.productBrands.id, id));
     return { data: { ok: true, deleted: brand } };
   });
 
@@ -1173,7 +1206,7 @@ export async function adminRoutes(app: FastifyInstance) {
     async (req, reply) => {
       const b = req.body as { name: string; slug?: string; description?: string; section: string; sort?: number };
       const slug = b.slug ? slugify(b.slug) : slugify(b.name);
-      const [cat] = await db
+      const [insertCat] = await db
         .insert(s.categories)
         .values({
           name: b.name,
@@ -1181,8 +1214,8 @@ export async function adminRoutes(app: FastifyInstance) {
           description: b.description ?? "",
           section: b.section,
           sort: b.sort ?? 0,
-        })
-        .returning();
+        });
+      const [cat] = await db.select().from(s.categories).where(eq(s.categories.id, insertCat.insertId));
       await catalogChanged();
       reply.code(201);
       return { data: cat };
@@ -1206,7 +1239,8 @@ export async function adminRoutes(app: FastifyInstance) {
     },
     async (req) => {
       const { id } = req.params as { id: number };
-      const [cat] = await db.update(s.categories).set(req.body as any).where(eq(s.categories.id, id)).returning();
+      await db.update(s.categories).set(req.body as any).where(eq(s.categories.id, id));
+      const [cat] = await db.select().from(s.categories).where(eq(s.categories.id, id));
       if (!cat) throw notFound("Category");
       await catalogChanged();
       return { data: cat };
@@ -1215,8 +1249,9 @@ export async function adminRoutes(app: FastifyInstance) {
 
   app.delete("/categories/:id", { schema: { tags, security, params: Type.Object({ id: Type.Integer() }) } }, async (req) => {
     const { id } = req.params as { id: number };
-    const [cat] = await db.delete(s.categories).where(eq(s.categories.id, id)).returning();
+    const [cat] = await db.select().from(s.categories).where(eq(s.categories.id, id));
     if (!cat) throw notFound("Category");
+    await db.delete(s.categories).where(eq(s.categories.id, id));
     await catalogChanged();
     return { data: { ok: true, deleted: cat } };
   });
@@ -1247,7 +1282,7 @@ export async function adminRoutes(app: FastifyInstance) {
     async (req, reply) => {
       const b = req.body as { name: string; slug?: string; section: string; hint?: string; color?: string; accent?: string; sort?: number; active?: boolean };
       const slug = b.slug ? slugify(b.slug) : slugify(b.name);
-      const [style] = await db
+      const [insertStyle] = await db
         .insert(s.customStyles)
         .values({
           name: b.name,
@@ -1258,8 +1293,8 @@ export async function adminRoutes(app: FastifyInstance) {
           accent: b.accent ?? null,
           sort: b.sort ?? 0,
           active: b.active ?? true,
-        })
-        .returning();
+        });
+      const [style] = await db.select().from(s.customStyles).where(eq(s.customStyles.id, insertStyle.insertId));
       await catalogChanged();
       reply.code(201);
       return { data: style };
@@ -1285,7 +1320,8 @@ export async function adminRoutes(app: FastifyInstance) {
     },
     async (req) => {
       const { id } = req.params as { id: number };
-      const [style] = await db.update(s.customStyles).set(req.body as any).where(eq(s.customStyles.id, id)).returning();
+      await db.update(s.customStyles).set(req.body as any).where(eq(s.customStyles.id, id));
+      const [style] = await db.select().from(s.customStyles).where(eq(s.customStyles.id, id));
       if (!style) throw notFound("Style");
       await catalogChanged();
       return { data: style };
@@ -1294,8 +1330,9 @@ export async function adminRoutes(app: FastifyInstance) {
 
   app.delete("/custom-styles/:id", { schema: { tags, security, params: Type.Object({ id: Type.Integer() }) } }, async (req) => {
     const { id } = req.params as { id: number };
-    const [style] = await db.delete(s.customStyles).where(eq(s.customStyles.id, id)).returning();
+    const [style] = await db.select().from(s.customStyles).where(eq(s.customStyles.id, id));
     if (!style) throw notFound("Style");
+    await db.delete(s.customStyles).where(eq(s.customStyles.id, id));
     await catalogChanged();
     return { data: { ok: true, deleted: style } };
   });
@@ -1326,7 +1363,8 @@ export async function adminRoutes(app: FastifyInstance) {
     },
     async (req, reply) => {
       const b = req.body as any;
-      const [signal] = await db.insert(s.trustSignals).values(b).returning();
+      const [insertSig] = await db.insert(s.trustSignals).values(b);
+      const [signal] = await db.select().from(s.trustSignals).where(eq(s.trustSignals.id, insertSig.insertId));
       invalidate("social-proof");
       reply.code(201);
       return { data: signal };
@@ -1355,7 +1393,8 @@ export async function adminRoutes(app: FastifyInstance) {
     },
     async (req) => {
       const { id } = req.params as { id: number };
-      const [signal] = await db.update(s.trustSignals).set(req.body as any).where(eq(s.trustSignals.id, id)).returning();
+      await db.update(s.trustSignals).set(req.body as any).where(eq(s.trustSignals.id, id));
+      const [signal] = await db.select().from(s.trustSignals).where(eq(s.trustSignals.id, id));
       if (!signal) throw notFound("Trust signal");
       invalidate("social-proof");
       return { data: signal };
@@ -1364,8 +1403,9 @@ export async function adminRoutes(app: FastifyInstance) {
 
   app.delete("/trust-signals/:id", { schema: { tags, security, params: Type.Object({ id: Type.Integer() }) } }, async (req) => {
     const { id } = req.params as { id: number };
-    const [signal] = await db.delete(s.trustSignals).where(eq(s.trustSignals.id, id)).returning();
+    const [signal] = await db.select().from(s.trustSignals).where(eq(s.trustSignals.id, id));
     if (!signal) throw notFound("Trust signal");
+    await db.delete(s.trustSignals).where(eq(s.trustSignals.id, id));
     invalidate("social-proof");
     return { data: { ok: true, deleted: signal } };
   });
@@ -1393,10 +1433,12 @@ export async function adminRoutes(app: FastifyInstance) {
     },
     async (req) => {
       const val = req.body;
-      await db
-        .insert(s.trustSettings)
-        .values({ key: "general", value: val })
-        .onConflictDoUpdate({ target: s.trustSettings.key, set: { value: val } });
+      const [existingSetting] = await db.select().from(s.trustSettings).where(eq(s.trustSettings.key, "general"));
+      if (existingSetting) {
+        await db.update(s.trustSettings).set({ value: val }).where(eq(s.trustSettings.id, existingSetting.id));
+      } else {
+        await db.insert(s.trustSettings).values({ key: "general", value: val });
+      }
       invalidate("social-proof");
       return { data: val };
     },

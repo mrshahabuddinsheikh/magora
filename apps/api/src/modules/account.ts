@@ -39,10 +39,10 @@ export async function accountRoutes(app: FastifyInstance) {
       if (b.phone && !phone) throw badRequest("Invalid mobile number", "invalid_phone");
       const [exists] = await db.select({ id: s.users.id }).from(s.users).where(eq(s.users.email, email));
       if (exists) throw new ApiError(409, "email_taken", "An account with this email already exists");
-      const [u] = await db
+      const [insertRes] = await db
         .insert(s.users)
-        .values({ name: b.name.trim(), email, phone, passwordHash: await bcrypt.hash(b.password, 10) })
-        .returning();
+        .values({ name: b.name.trim(), email, phone, passwordHash: await bcrypt.hash(b.password, 10) });
+      const [u] = await db.select().from(s.users).where(eq(s.users.id, insertRes.insertId));
       await claimGuestOrders(u); // earlier guest orders with this email / mobile show up in the account
       reply.code(201);
       return { data: { token: sign(u), user: publicUser(u) } };
@@ -94,7 +94,8 @@ export async function accountRoutes(app: FastifyInstance) {
         set.phone = p;
       }
       if (b.password) set.passwordHash = await bcrypt.hash(b.password, 10);
-      const [u] = await db.update(s.users).set(set).where(eq(s.users.id, req.user.id)).returning();
+      await db.update(s.users).set(set).where(eq(s.users.id, req.user.id));
+      const [u] = await db.select().from(s.users).where(eq(s.users.id, req.user.id));
       return { data: publicUser(u) };
     },
   );
@@ -140,7 +141,8 @@ export async function accountRoutes(app: FastifyInstance) {
     const phone = normalizePkPhone(b.phone);
     if (!phone) throw badRequest("Invalid mobile number", "invalid_phone");
     if (b.isDefault) await db.update(s.addresses).set({ isDefault: false }).where(eq(s.addresses.userId, req.user.id));
-    const [a] = await db.insert(s.addresses).values({ ...b, phone, userId: req.user.id }).returning();
+    const [insertRes] = await db.insert(s.addresses).values({ ...b, phone, userId: req.user.id });
+    const [a] = await db.select().from(s.addresses).where(eq(s.addresses.id, insertRes.insertId));
     reply.code(201);
     return { data: a };
   });
@@ -170,7 +172,8 @@ export async function accountRoutes(app: FastifyInstance) {
     { preHandler: requireAuth, schema: { tags: ["Account"], security: sec, params: Type.Object({ productId: Type.Integer() }) } },
     async (req) => {
       const { productId } = req.params as { productId: number };
-      await db.insert(s.wishlist).values({ userId: req.user.id, productId }).onConflictDoNothing();
+      const [existing] = await db.select().from(s.wishlist).where(and(eq(s.wishlist.userId, req.user.id), eq(s.wishlist.productId, productId)));
+      if (!existing) await db.insert(s.wishlist).values({ userId: req.user.id, productId });
       return { data: { ok: true } };
     },
   );

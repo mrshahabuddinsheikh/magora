@@ -170,15 +170,15 @@ export async function orderRoutes(app: FastifyInstance) {
 
         // reserve stock — the WHERE stock >= qty guard prevents overselling under load
         for (const i of cart.items) {
-          const r = await tx
+          const [r] = await tx
             .update(s.variants)
             .set({ stock: sql`${s.variants.stock} - ${i.qty}` })
             .where(and(eq(s.variants.id, i.variantId), sql`${s.variants.stock} >= ${i.qty}`));
-          if (r.rowsAffected !== 1) throw new ApiError(409, "stock_changed", `${i.product.name} just sold out${i.model ? ` for ${i.model.name}` : ""}`);
+          if ((r as any)?.affectedRows !== 1 && (r as any)?.rowsAffected !== 1) throw new ApiError(409, "stock_changed", `${i.product.name} just sold out${i.model ? ` for ${i.model.name}` : ""}`);
         }
 
         const codFee = provider.id === "cod" ? cart.totals.codFee : 0;
-        const [created] = await tx
+        const [createdRes] = await tx
           .insert(s.orders)
           .values({
             number: `TMP-${nanoid(12)}`, // replaced with MG1000xx below (id-based, collision-free)
@@ -201,13 +201,14 @@ export async function orderRoutes(app: FastifyInstance) {
             couponCode: cart.coupon?.code ?? null,
             source: body.source ?? "web",
             openParcel: store.labels.openParcelDefault,
-          })
-          .returning();
-        const [order] = await tx
+          });
+        const orderId = createdRes.insertId;
+        const orderNumber = `MG${100000 + orderId}`;
+        await tx
           .update(s.orders)
-          .set({ number: `MG${100000 + created.id}` })
-          .where(eq(s.orders.id, created.id))
-          .returning();
+          .set({ number: orderNumber })
+          .where(eq(s.orders.id, orderId));
+        const [order] = await tx.select().from(s.orders).where(eq(s.orders.id, orderId));
 
         await tx.insert(s.orderItems).values(
           cart.items.map((i) => ({

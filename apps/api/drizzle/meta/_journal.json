@@ -1,75 +1,12 @@
 {
   "version": "7",
-  "dialect": "sqlite",
+  "dialect": "mysql",
   "entries": [
     {
       "idx": 0,
-      "version": "6",
-      "when": 1794472614240,
-      "tag": "0000_init",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "6",
-      "when": 1794481536191,
-      "tag": "0001_tracking_returns",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "6",
-      "when": 1794484022169,
-      "tag": "0002_skins_protectors",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "6",
-      "when": 1794491172265,
-      "tag": "0003_gadgets",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "6",
-      "when": 1794494216279,
-      "tag": "0004_phone_details",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "6",
-      "when": 1794499234806,
-      "tag": "0005_product_view",
-      "breakpoints": true
-    },
-    {
-      "idx": 6,
-      "version": "6",
-      "when": 1794502424085,
-      "tag": "0006_cod_safety",
-      "breakpoints": true
-    },
-    {
-      "idx": 7,
-      "version": "6",
-      "when": 1794512352771,
-      "tag": "0007_iphone18_burgundy",
-      "breakpoints": true
-    },
-    {
-      "idx": 8,
-      "version": "6",
-      "when": 1794542629746,
-      "tag": "0008_order_desk",
-      "breakpoints": true
-    },
-    {
-      "idx": 9,
-      "version": "6",
-      "when": 1794545881359,
-      "tag": "0009_review_requests",
+      "version": "5",
+      "when": 1794829058371,
+      "tag": "0000_flawless_fixer",
       "breakpoints": true
     }
   ]

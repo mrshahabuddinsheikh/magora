@@ -6,10 +6,34 @@ const env = (k: string, d?: string) => {
   return v;
 };
 
+function parseDbConfig() {
+  const urlStr = process.env.DATABASE_URL;
+  if (urlStr && (urlStr.startsWith("mysql:") || urlStr.startsWith("mysql2:"))) {
+    try {
+      const u = new URL(urlStr);
+      return {
+        host: u.hostname || "localhost",
+        port: Number(u.port || 3306),
+        user: decodeURIComponent(u.username || "officialhayafoun_magora"),
+        password: decodeURIComponent(u.password || "Shahab@1122"),
+        database: u.pathname.replace(/^\//, "") || "officialhayafoun_magora",
+      };
+    } catch {}
+  }
+  return {
+    host: process.env.DB_HOST || "localhost",
+    port: Number(process.env.DB_PORT || 3306),
+    user: process.env.DB_USER || "officialhayafoun_magora",
+    password: process.env.DB_PASSWORD || "Shahab@1122",
+    database: process.env.DB_NAME || "officialhayafoun_magora",
+  };
+}
+
 export const config = {
   port: Number(env("PORT", "4000")),
   host: env("HOST", "0.0.0.0"),
-  databaseUrl: env("DATABASE_URL", "file:./data/store.db"),
+  db: parseDbConfig(),
+  databaseUrl: env("DATABASE_URL", "mysql://officialhayafoun_magora:Shahab%401122@localhost:3306/officialhayafoun_magora"),
   databaseAuthToken: process.env.DATABASE_AUTH_TOKEN,
   jwtSecret: env("JWT_SECRET", "change-me-in-production-please"),
   corsOrigins: env("CORS_ORIGINS", "*")

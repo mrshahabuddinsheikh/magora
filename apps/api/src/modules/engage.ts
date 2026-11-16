@@ -246,7 +246,13 @@ export async function adminEngageRoutes(app: FastifyInstance) {
       const b = req.body as { phone: string; reason?: string };
       const phone = normalizePkPhone(b.phone);
       if (!phone) throw badRequest("Invalid mobile number", "invalid_phone");
-      await db.insert(s.blockedPhones).values({ phone, reason: b.reason?.trim() || null }).onConflictDoUpdate({ target: s.blockedPhones.phone, set: { reason: b.reason?.trim() || null } });
+      const reason = b.reason?.trim() || null;
+      const [ex] = await db.select().from(s.blockedPhones).where(eq(s.blockedPhones.phone, phone));
+      if (ex) {
+        await db.update(s.blockedPhones).set({ reason }).where(eq(s.blockedPhones.phone, phone));
+      } else {
+        await db.insert(s.blockedPhones).values({ phone, reason });
+      }
       reply.code(201);
       return { data: { phone } };
     },
