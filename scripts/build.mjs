@@ -1,5 +1,6 @@
 // The website pre-renders pages from the API, so the API must be running while building.
 import { spawn, execSync } from "node:child_process";
+import path from "node:path";
 
 let alreadyRunning = false;
 try {
@@ -10,12 +11,13 @@ try {
 let api = null;
 if (!alreadyRunning) {
   const fallbackSecret = "c8d4f9b2a1e76543089dcbafe1234567890abcdef1234567890abcdef1234567";
-  const isWindows = process.platform === "win32";
-  const npxCmd = isWindows ? "npx.cmd" : "npx";
-  api = spawn(npxCmd, ["tsx", "src/server.ts"], {
+  const tsxCli = path.resolve("node_modules", "tsx", "dist", "cli.mjs");
+  api = spawn(process.execPath, [tsxCli, "src/server.ts"], {
     cwd: "apps/api",
     env: {
       ...process.env,
+      PORT: "4000",
+      HOST: "0.0.0.0",
       JWT_SECRET: process.env.JWT_SECRET || fallbackSecret,
       WEB_REVALIDATE_SECRET: process.env.WEB_REVALIDATE_SECRET || fallbackSecret,
       CORS_ORIGINS: process.env.CORS_ORIGINS || "https://new.officialhayafoundation.com",
