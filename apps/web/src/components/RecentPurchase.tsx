@@ -39,8 +39,8 @@ export function RecentPurchase() {
   }>({
     enabled: true,
     mode: "hybrid",
-    initialDelaySec: 6,
-    intervalSec: 28,
+    initialDelaySec: 3,
+    intervalSec: 16,
     durationSec: 6,
   });
   const [cur, setCur] = useState<Sale | null>(null);
@@ -62,7 +62,7 @@ export function RecentPurchase() {
           if (r.settings) setSettings(r.settings);
         })
         .catch(() => {});
-    }, 2000); // after the page is ready — never slows the first load
+    }, 800);
     return () => clearTimeout(t);
   }, []);
 
@@ -104,15 +104,15 @@ export function RecentPurchase() {
         show ? "translate-y-0 opacity-100" : "pointer-events-none translate-y-4 opacity-0"
       }`}
     >
-      <div className="glass relative flex items-center gap-3 rounded-[20px] !bg-white/95 p-2.5 pr-8 shadow-[0_18px_40px_-18px_rgba(15,23,42,.45)]">
-        <Link href={`/product/${cur.slug}`} className="grid h-14 w-12 shrink-0 place-items-center overflow-hidden rounded-xl bg-gradient-to-b from-[#f4f5f9] to-[#e9ebf1]">
+      <div className="relative flex items-center gap-3 rounded-[20px] bg-white/95 dark:bg-[#151821]/95 border border-black/10 dark:border-white/10 p-2.5 pr-8 shadow-[0_18px_40px_-18px_rgba(0,0,0,.45)] backdrop-blur-md">
+        <Link href={`/product/${cur.slug}`} className="grid h-14 w-12 shrink-0 place-items-center overflow-hidden rounded-xl bg-gradient-to-b from-[#f4f5f9] to-[#e9ebf1] dark:from-[#212634] dark:to-[#171a23]">
           <ProductThumb material={cur.material ?? "clear"} color={cur.colorHex} className="h-[86%] w-auto" />
         </Link>
         <Link href={`/product/${cur.slug}`} className="min-w-0 text-[12.5px] leading-snug">
           <span className="text-muted">Someone in <b className="text-ink">{cur.city}</b> bought</span>
-          <b className="block truncate text-[13.5px]">{cur.product}</b>
+          <b className="block truncate text-[13.5px] text-ink">{cur.product}</b>
           <span className="flex items-center gap-1 text-[11.5px] text-muted">
-            {ago(cur.at)} · <BadgeCheck size={12} className="text-success" /> real order
+            {ago(cur.at)} · <BadgeCheck size={12} className="text-success shrink-0" /> real order
           </span>
         </Link>
         <button
@@ -120,7 +120,7 @@ export function RecentPurchase() {
             setOff(true);
             try { sessionStorage.setItem("mg-proof-off", "1"); } catch {}
           }}
-          className="absolute right-2 top-2 grid h-6 w-6 place-items-center rounded-full text-muted hover:bg-black/5"
+          className="absolute right-2 top-2 grid h-6 w-6 place-items-center rounded-full text-muted hover:bg-black/5 dark:hover:bg-white/10"
           aria-label="Hide"
         >
           <X size={13} />

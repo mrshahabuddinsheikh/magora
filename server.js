@@ -41,10 +41,14 @@ async function bootstrap() {
 
     if (!apiHealthy) {
       console.log("⏳ Launching background Fastify API service...");
+      const distServer = path.join(apiDir, "dist", "server.js");
+      const hasDist = fs.existsSync(distServer);
       const tsxCli = path.resolve(__dirname, "node_modules", "tsx", "dist", "cli.mjs");
+      const spawnArgs = hasDist ? [distServer] : [tsxCli, "src/server.ts"];
+
       const apiProcess = spawn(
         process.execPath,
-        [tsxCli, "src/server.ts"],
+        spawnArgs,
         {
           cwd: apiDir,
           env: {

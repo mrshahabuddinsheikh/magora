@@ -88,14 +88,20 @@ jobs:
             npm install --omit=dev --no-audit --prefer-offline || npm install
             
             echo "🌱 Seeding initial MySQL data (idempotent safe)..."
-            npm run db:seed -w @magora/api || true
-            npm run db:reviews -w @magora/api || true
+            if [ -f apps/api/dist/seed.js ]; then
+              node apps/api/dist/seed.js || true
+              node apps/api/dist/seed-reviews.js || true
+            else
+              npm run db:seed -w @magora/api || true
+              npm run db:reviews -w @magora/api || true
+            fi
             
             echo "🔒 Setting production permissions..."
             chmod -R 755 .
             chmod -R 777 apps/api/uploads apps/api/backups
             
-            echo "🔄 Gracefully restarting Phusion Passenger..."
+            echo "🔄 Gracefully restarting Fastify & Phusion Passenger..."
+            fuser -k 4000/tcp || pkill -f 'dist/server.js' || pkill -f 'src/server.ts' || true
             touch tmp/restart.txt
             
             echo "✅ Deployment successful! Magora Store is LIVE."

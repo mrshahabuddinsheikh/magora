@@ -231,5 +231,72 @@ if (!existing.length) {
   console.log(`✓ Admin created: ${adminEmail} (change the password in .env before going live)`);
 }
 
+/* trust settings (social proof popups frequency and config) */
+const [existingTrustSettings] = await db.select().from(s.trustSettings).where(eq(s.trustSettings.key, "general"));
+if (!existingTrustSettings) {
+  await db.insert(s.trustSettings).values({
+    key: "general",
+    value: { enabled: true, mode: "hybrid", initialDelaySec: 3, intervalSec: 16, durationSec: 6 },
+  });
+  console.log("✓ Seeded trust settings");
+}
+
+/* trust signals (social proof sales popups) */
+const defaultSignals = [
+  { city: "Lahore", productName: "Crystal Clear MagSafe Case", productSlug: "crystal-clear-magsafe-case", material: "clear", colorHex: "#f4f7fb", modelName: "iPhone 16 Pro Max", timeAgoText: "2 min ago", sort: 1 },
+  { city: "Karachi", productName: "Frosted Matte MagSafe Case", productSlug: "frosted-matte-magsafe-case", material: "frosted", colorHex: "#1f2024", modelName: "Galaxy S25 Ultra", timeAgoText: "5 min ago", sort: 2 },
+  { city: "Islamabad", productName: "Carbon Fiber 3D Textured Skin", productSlug: "carbon-fiber-skin", material: "skin-carbon", colorHex: "#1f2024", modelName: "iPhone 15 Pro", timeAgoText: "11 min ago", sort: 3 },
+  { city: "Rawalpindi", productName: "9H Tempered Glass Protector", productSlug: "9h-tempered-glass", material: "glass-clear", colorHex: "#e8f1fb", modelName: "iPhone 14 Pro Max", timeAgoText: "18 min ago", sort: 4 },
+  { city: "Faisalabad", productName: "65W GaN 3-Port Fast Charger", productSlug: "65w-gan-charger", material: "gadget-charger", colorHex: "#ffffff", modelName: null, timeAgoText: "27 min ago", sort: 5 },
+  { city: "Multan", productName: "Vegan Leather MagSafe Case", productSlug: "vegan-leather-magsafe-case", material: "leather", colorHex: "#8a5a3b", modelName: "Galaxy S24 Ultra", timeAgoText: "42 min ago", sort: 6 },
+  { city: "Peshawar", productName: "Armor Kickstand MagSafe Case", productSlug: "armor-kickstand-magsafe-case", material: "armor", colorHex: "#2b2d42", modelName: "iPhone 16 Pro", timeAgoText: "1 hour ago", sort: 7 },
+  { city: "Sialkot", productName: "Magnetic Power Bank 5,000 mAh", productSlug: "magsafe-power-bank-5000", material: "gadget-powerbank", colorHex: "#f2f3f5", modelName: null, timeAgoText: "2 hours ago", sort: 8 },
+  { city: "Gujranwala", productName: "Silicone Soft Touch MagSafe Case", productSlug: "silicone-soft-touch-case", material: "silicone", colorHex: "#2e384d", modelName: "Pixel 9 Pro", timeAgoText: "2 hours ago", sort: 9 },
+  { city: "Quetta", productName: "MagSafe Ring Stand & Grip", productSlug: "magsafe-ring-stand-grip", material: "gadget-ring", colorHex: "#1a1a1a", modelName: null, timeAgoText: "3 hours ago", sort: 10 },
+];
+for (const sig of defaultSignals) {
+  const [existingSig] = await db.select().from(s.trustSignals).where(and(eq(s.trustSignals.city, sig.city), eq(s.trustSignals.productSlug, sig.productSlug)));
+  if (!existingSig) {
+    await db.insert(s.trustSignals).values({ ...sig, active: true });
+  }
+}
+console.log("✓ Seeded trust signals");
+
+/* product brands (Casetify, dbrand, Ronin, Spigen, Apple, etc.) */
+const defaultBrands = [
+  { slug: "magora", name: "Magora", description: "Official Magora Original Cases & Accessories", sort: 1 },
+  { slug: "casetify", name: "Casetify", description: "High-impact designer protective cases", sort: 2 },
+  { slug: "dbrand", name: "dbrand", description: "Precision vinyl skins, grip cases & tempered glass", sort: 3 },
+  { slug: "ronin", name: "Ronin", description: "Premium Pakistani mobile accessories & audio", sort: 4 },
+  { slug: "spigen", name: "Spigen", description: "Tough armor & ultra hybrid protection", sort: 5 },
+  { slug: "apple", name: "Apple", description: "Original Apple MagSafe accessories", sort: 6 },
+  { slug: "samsung", name: "Samsung", description: "Original Samsung Galaxy covers & chargers", sort: 7 },
+  { slug: "rhinoshield", name: "RhinoShield", description: "Impact protection crashguards & solidsuit", sort: 8 },
+  { slug: "anker", name: "Anker", description: "Industry-leading GaN chargers & power banks", sort: 9 },
+];
+for (const b of defaultBrands) {
+  const [existingB] = await db.select().from(s.productBrands).where(eq(s.productBrands.slug, b.slug));
+  if (!existingB) {
+    await db.insert(s.productBrands).values({ ...b, active: true });
+  }
+}
+console.log("✓ Seeded product brands");
+
+/* custom styles & materials */
+const defaultStyles = [
+  { slug: "clear", name: "Crystal Clear", section: "magsafe-cases", hint: "Show off the original phone colour", color: "#f4f7fb", accent: "#38bdf8", sort: 1 },
+  { slug: "frosted", name: "Frosted Matte", section: "magsafe-cases", hint: "Anti-fingerprint matte translucent finish", color: "#25272b", accent: "#94a3b8", sort: 2 },
+  { slug: "leather", name: "Vegan Leather", section: "magsafe-cases", hint: "Luxury stitched synthetic leather", color: "#8a5a3b", accent: "#d4a373", sort: 3 },
+  { slug: "armor", name: "Heavy Duty Armor", section: "magsafe-cases", hint: "Shock-absorbing dual layer kickstand", color: "#1f2229", accent: "#f97316", sort: 4 },
+  { slug: "silicone", name: "Silicone Touch", section: "magsafe-cases", hint: "Silky soft-touch with microfiber lining", color: "#2e384d", accent: "#60a5fa", sort: 5 },
+];
+for (const st of defaultStyles) {
+  const [existingSt] = await db.select().from(s.customStyles).where(eq(s.customStyles.slug, st.slug));
+  if (!existingSt) {
+    await db.insert(s.customStyles).values({ ...st, active: true });
+  }
+}
+console.log("✓ Seeded custom styles");
+
 client.close();
 console.log("✓ Seed complete");

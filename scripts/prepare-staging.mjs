@@ -41,6 +41,7 @@ const apiDest = path.join(stagingDir, "apps", "api");
   if (fs.existsSync(p)) copyRecursive(p, path.join(apiDest, f));
 });
 copyRecursive(path.join(rootDir, "apps", "api", "src"), path.join(apiDest, "src"));
+copyRecursive(path.join(rootDir, "apps", "api", "dist"), path.join(apiDest, "dist"));
 copyRecursive(path.join(rootDir, "apps", "api", "drizzle"), path.join(apiDest, "drizzle"));
 
 // 4. apps/web files
