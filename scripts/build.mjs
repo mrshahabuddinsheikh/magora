@@ -10,7 +10,9 @@ try {
 let api = null;
 if (!alreadyRunning) {
   const fallbackSecret = "c8d4f9b2a1e76543089dcbafe1234567890abcdef1234567890abcdef1234567";
-  api = spawn(process.execPath, ["--import", "tsx", "src/server.ts"], {
+  const isWindows = process.platform === "win32";
+  const npxCmd = isWindows ? "npx.cmd" : "npx";
+  api = spawn(npxCmd, ["tsx", "src/server.ts"], {
     cwd: "apps/api",
     env: {
       ...process.env,

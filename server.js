@@ -41,9 +41,11 @@ async function bootstrap() {
 
     if (!apiHealthy) {
       console.log("⏳ Launching background Fastify API service...");
+      const isWindows = process.platform === "win32";
+      const npxCmd = isWindows ? "npx.cmd" : "npx";
       const apiProcess = spawn(
-        process.execPath,
-        ["--import", "tsx", "src/server.ts"],
+        npxCmd,
+        ["tsx", "src/server.ts"],
         {
           cwd: apiDir,
           env: {
