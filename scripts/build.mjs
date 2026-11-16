@@ -9,7 +9,19 @@ try {
 
 let api = null;
 if (!alreadyRunning) {
-  api = spawn(process.execPath, ["--import", "tsx", "src/server.ts"], { cwd: "apps/api", stdio: "inherit" });
+  const fallbackSecret = "c8d4f9b2a1e76543089dcbafe1234567890abcdef1234567890abcdef1234567";
+  api = spawn(process.execPath, ["--import", "tsx", "src/server.ts"], {
+    cwd: "apps/api",
+    env: {
+      ...process.env,
+      JWT_SECRET: process.env.JWT_SECRET || fallbackSecret,
+      WEB_REVALIDATE_SECRET: process.env.WEB_REVALIDATE_SECRET || fallbackSecret,
+      CORS_ORIGINS: process.env.CORS_ORIGINS || "https://new.officialhayafoundation.com",
+      PUBLIC_API_URL: process.env.PUBLIC_API_URL || "https://new.officialhayafoundation.com/api/v1",
+      PUBLIC_WEB_URL: process.env.PUBLIC_WEB_URL || "https://new.officialhayafoundation.com",
+    },
+    stdio: "inherit",
+  });
   let healthy = false;
   for (let i = 0; i < 60; i++) {
     try {

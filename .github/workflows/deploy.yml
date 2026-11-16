@@ -34,8 +34,12 @@ jobs:
       - name: 4. Build Next.js & Fastify Apps
         env:
           NODE_ENV: production
-          NEXT_PUBLIC_API_URL: /api/v1
+          JWT_SECRET: c8d4f9b2a1e76543089dcbafe1234567890abcdef1234567890abcdef1234567
+          WEB_REVALIDATE_SECRET: c8d4f9b2a1e76543089dcbafe1234567890abcdef1234567890abcdef1234567
+          CORS_ORIGINS: https://new.officialhayafoundation.com
+          PUBLIC_API_URL: https://new.officialhayafoundation.com/api/v1
           API_URL: http://127.0.0.1:4000/api/v1
+          NEXT_PUBLIC_API_URL: /api/v1
           NEXT_PUBLIC_SITE_URL: https://new.officialhayafoundation.com
         run: |
           npm run build
