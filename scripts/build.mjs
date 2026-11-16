@@ -24,8 +24,13 @@ if (!alreadyRunning) {
       PUBLIC_API_URL: process.env.PUBLIC_API_URL || "https://new.officialhayafoundation.com/api/v1",
       PUBLIC_WEB_URL: process.env.PUBLIC_WEB_URL || "https://new.officialhayafoundation.com",
     },
-    stdio: "inherit",
+    stdio: "pipe",
   });
+
+  api.stdout.on("data", (d) => process.stdout.write(`[API STDOUT] ${d}`));
+  api.stderr.on("data", (d) => process.stderr.write(`[API STDERR] ${d}`));
+  api.on("error", (e) => console.error("[API PROCESS ERROR]", e));
+  api.on("exit", (code, sig) => console.log(`[API EXITED] code=${code} sig=${sig}`));
   let healthy = false;
   for (let i = 0; i < 60; i++) {
     try {
