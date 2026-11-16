@@ -68,6 +68,11 @@ jobs:
             TARGET="${{ secrets.SSH_TARGET_DIR || '/home/officialhayafoun/new.officialhayafoundation.com' }}"
             cd "$TARGET"
             
+            # 1. Activate CloudLinux virtual environment (critical so node & npm are in PATH)
+            if [ -f /home/officialhayafoun/nodevenv/new.officialhayafoundation.com/20/bin/activate ]; then
+              source /home/officialhayafoun/nodevenv/new.officialhayafoundation.com/20/bin/activate
+            fi
+            
             echo "📦 Extracting release archive..."
             tar -xzf magora-release.tar.gz
             rm -f magora-release.tar.gz
