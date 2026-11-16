@@ -1,0 +1,15 @@
+# Caddy gives free HTTPS (SSL) automatically. Replace yourdomain.pk with your real domain.
+# Point both DNS "A" records (yourdomain.pk and api.yourdomain.pk) to the server's IP first.
+
+yourdomain.pk, www.yourdomain.pk {
+	encode zstd gzip
+	reverse_proxy localhost:3000
+}
+
+api.yourdomain.pk {
+	encode zstd gzip
+	request_body {
+		max_size 60MB
+	}
+	reverse_proxy localhost:4000
+}

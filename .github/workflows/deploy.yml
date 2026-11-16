@@ -1,0 +1,88 @@
+name: Deploy Magora Store to cPanel
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+concurrency:
+  group: production-deployment
+  cancel-in-progress: true
+
+jobs:
+  build-and-deploy:
+    name: Build & Deploy to cPanel
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: 1. Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: 2. Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "npm"
+
+      - name: 3. Install Monorepo Dependencies
+        run: |
+          npm ci
+
+      - name: 4. Build Next.js & Fastify Apps
+        env:
+          NODE_ENV: production
+          NEXT_PUBLIC_API_URL: /api/v1
+          API_URL: http://127.0.0.1:4000/api/v1
+          NEXT_PUBLIC_SITE_URL: https://new.officialhayafoundation.com
+        run: |
+          npm run build
+
+      - name: 5. Prepare Staging Release Bundle
+        run: |
+          node scripts/prepare-staging.mjs
+          tar -czf magora-release.tar.gz -C staging .
+
+      - name: 6. Upload Release Archive to Server via SCP
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          password: ${{ secrets.SSH_PASSWORD }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          source: "magora-release.tar.gz"
+          target: ${{ secrets.SSH_TARGET_DIR || '/home/officialhayafoun/new.officialhayafoundation.com' }}
+
+      - name: 7. Extract Release & Reload Passenger via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          password: ${{ secrets.SSH_PASSWORD }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          script: |
+            TARGET="${{ secrets.SSH_TARGET_DIR || '/home/officialhayafoun/new.officialhayafoundation.com' }}"
+            cd "$TARGET"
+            
+            echo "📦 Extracting release archive..."
+            tar -xzf magora-release.tar.gz
+            rm -f magora-release.tar.gz
+            
+            echo "📁 Ensuring persistent storage directories exist..."
+            mkdir -p apps/api/data apps/api/uploads apps/api/backups tmp
+            
+            echo "📦 Installing production dependencies..."
+            npm install --omit=dev --no-audit --prefer-offline || npm install
+            
+            echo "🔒 Setting production permissions..."
+            chmod -R 755 .
+            chmod -R 777 apps/api/data apps/api/uploads apps/api/backups
+            
+            echo "🔄 Gracefully restarting Phusion Passenger..."
+            touch tmp/restart.txt
+            
+            echo "✅ Deployment successful! Magora Store is LIVE."

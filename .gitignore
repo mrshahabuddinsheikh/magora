@@ -1,0 +1,60 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Production / Next.js builds
+.next/
+out/
+dist/
+build/
+staging/
+release/
+release.tar.gz
+magora-production-build/
+magora-production-build.zip
+
+# TypeScript & Cache
+*.tsbuildinfo
+next-env.d.ts
+.turbo
+
+# Environment variables
+.env
+.env.local
+.env*.local
+!.env.example
+!**/.env.example
+
+# Database & Uploads (CRITICAL: Never commit live DB or customer uploads)
+apps/api/data/*.db
+apps/api/data/*.db-journal
+apps/api/data/*.db-wal
+apps/api/data/*.db-shm
+apps/api/uploads/*
+!apps/api/uploads/.gitkeep
+apps/api/backups/*
+!apps/api/backups/.gitkeep
+*.db
+*.db-wal
+*.db-shm
+uploads/
+backups/
+
+# Logs & temp files
+*.log
+npm-debug.log*
+yarn-debug.log*
+start-log.txt
+stderr.log
+tmp/
+
+# OS metadata & local editor artifacts
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+.v*.md5
+.pcmd5.txt
+Claude outputs/
