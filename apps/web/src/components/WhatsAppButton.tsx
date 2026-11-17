@@ -350,7 +350,7 @@ export function WhatsAppButton() {
   return (
     <>
       {/* ───── Fixed Floating Action Button (10s WhatsApp / 1min Chatbot cycle) ───── */}
-      <div className="fixed bottom-5 right-5 z-40 flex items-center gap-3">
+      <div className="fixed bottom-20 right-4 sm:bottom-6 sm:right-6 z-40 flex items-center gap-3">
         {/* Floating Bubble Button */}
         {open ? (
           <button
