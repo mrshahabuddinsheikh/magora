@@ -298,5 +298,157 @@ for (const st of defaultStyles) {
 }
 console.log("✓ Seeded custom styles");
 
+/* shoppable reels */
+const defaultReels = [
+  {
+    title: "Crystal Clear MagSafe Case — Real Unboxing & Snap Test",
+    caption: "Watch the unboxing of our best-selling Crystal Clear MagSafe Case for iPhone 16 Pro Max. 38x N52 Neodymium magnets with anti-yellowing German Bayer polycarbonate!",
+    videoUrl: "/videos/reel-1.mp4",
+    thumbnailUrl: "https://images.unsplash.com/photo-1601784551446-20c9e07cdbdb?w=600&h=1000&fit=crop",
+    productId: 1,
+    productName: "Crystal Clear MagSafe Case",
+    productPrice: 2499,
+    productCompareAtPrice: 3499,
+    productSlug: "crystal-clear-magsafe-case",
+    productImage: "https://images.unsplash.com/photo-1601784551446-20c9e07cdbdb?w=400&h=400&fit=crop",
+    phoneModel: "iPhone 16 Pro Max",
+    likesCount: 24850,
+    viewsCount: 68900,
+    commentsCount: 3,
+    sharesCount: 4210,
+    comments: [
+      {
+        id: "c1",
+        author: "Zainab Malik",
+        avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop&crop=face",
+        city: "Lahore",
+        rating: 5,
+        text: "Ordered this yesterday for my 16 Pro Max and got it today! Magnets are genuinely super strong. 10/10 recommend! 🔥",
+        likes: 142,
+        timeAgo: "2h ago",
+        verifiedBuyer: true,
+      },
+      {
+        id: "c2",
+        author: "Hamza Tariq",
+        avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face",
+        city: "Karachi",
+        rating: 5,
+        text: "Crystal clarity is insane. Doesn't turn yellow at all like cheap market cases. Best in Pakistan.",
+        likes: 89,
+        timeAgo: "5h ago",
+        verifiedBuyer: true,
+      },
+      {
+        id: "c3",
+        author: "Daniyal Sheikh",
+        avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&h=100&fit=crop&crop=face",
+        city: "Islamabad",
+        rating: 5,
+        text: "Car mount par direct chipak jata hai bilkul nahi girta! Worth every rupee.",
+        likes: 54,
+        timeAgo: "1d ago",
+        verifiedBuyer: true,
+      },
+    ],
+    active: true,
+    sort: 1,
+  },
+  {
+    title: "10-Foot Drop Test: Titanium Corner Armor in Action! 💥",
+    caption: "Can your case survive a 10-foot drop onto solid concrete? Watch our military-grade corner airbags absorb impact without a single scratch on the screen.",
+    videoUrl: "/videos/reel-2.mp4",
+    thumbnailUrl: "https://images.unsplash.com/photo-1580910051074-3eb694886505?w=600&h=1000&fit=crop",
+    productId: 1,
+    productName: "Heavy-Duty Armor MagSafe Case",
+    productPrice: 2999,
+    productCompareAtPrice: 4499,
+    productSlug: "armor-kickstand-magsafe-case",
+    productImage: "https://images.unsplash.com/photo-1580910051074-3eb694886505?w=400&h=400&fit=crop",
+    phoneModel: "iPhone 16 Pro Max",
+    likesCount: 38420,
+    viewsCount: 92100,
+    commentsCount: 2,
+    sharesCount: 6850,
+    comments: [
+      {
+        id: "c4",
+        author: "Bilal Ahmed",
+        avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face",
+        city: "Rawalpindi",
+        rating: 5,
+        text: "Bhai yeh drop test dekh kar foran buy now kar liya! Phone bacha liya case ne 👌",
+        likes: 210,
+        timeAgo: "1h ago",
+        verifiedBuyer: true,
+      },
+      {
+        id: "c5",
+        author: "Ayesha Khan",
+        avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop&crop=face",
+        city: "Faisalabad",
+        rating: 5,
+        text: "Titanium corner air cushions are actually legit. Hands down best protection.",
+        likes: 76,
+        timeAgo: "3h ago",
+        verifiedBuyer: true,
+      },
+    ],
+    active: true,
+    sort: 2,
+  },
+  {
+    title: "Frosted Matte Smoke Edition — The Ultimate Stealth Look 🖤",
+    caption: "Silky matte touch that resists grease, sweat, and fingerprints completely. Built-in aerospace aluminum camera ring that doubles as a kickstand!",
+    videoUrl: "/videos/reel-3.mp4",
+    thumbnailUrl: "https://images.unsplash.com/photo-1510557880182-3d4d3cba35a5?w=600&h=1000&fit=crop",
+    productId: 1,
+    productName: "Frosted Matte MagSafe Case",
+    productPrice: 2699,
+    productCompareAtPrice: 3699,
+    productSlug: "frosted-matte-magsafe-case",
+    productImage: "https://images.unsplash.com/photo-1510557880182-3d4d3cba35a5?w=400&h=400&fit=crop",
+    phoneModel: "iPhone 16 Pro / Max",
+    likesCount: 19840,
+    viewsCount: 51300,
+    commentsCount: 2,
+    sharesCount: 3120,
+    comments: [
+      {
+        id: "c6",
+        author: "Saad Rehman",
+        avatar: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=100&h=100&fit=crop&crop=face",
+        city: "Lahore",
+        rating: 5,
+        text: "Frosted matte texture feels exactly like the back glass of iPhone 16 Pro! Zero fingerprints.",
+        likes: 184,
+        timeAgo: "4h ago",
+        verifiedBuyer: true,
+      },
+      {
+        id: "c7",
+        author: "Omar Farooq",
+        avatar: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=100&h=100&fit=crop&crop=face",
+        city: "Multan",
+        rating: 5,
+        text: "Fast delivery by TCS in 24 hours. COD packaging was premium box.",
+        likes: 67,
+        timeAgo: "8h ago",
+        verifiedBuyer: true,
+      },
+    ],
+    active: true,
+    sort: 3,
+  },
+];
+
+for (const r of defaultReels) {
+  const [existingReel] = await db.select().from(s.shoppableReels).where(eq(s.shoppableReels.title, r.title));
+  if (!existingReel) {
+    await db.insert(s.shoppableReels).values(r);
+  }
+}
+console.log("✓ Seeded shoppable reels");
+
 client.close();
 console.log("✓ Seed complete");
