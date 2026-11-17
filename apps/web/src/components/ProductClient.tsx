@@ -63,34 +63,70 @@ export function ProductClient({ product: p, delivery }: { product: Product; deli
   const [engravingFont, setEngravingFont] = useState<"sans" | "serif" | "script">("sans");
   const ctaRef = useRef<HTMLDivElement>(null);
 
-  // hydrate selection from URL / remembered phone (client only, avoids SSR mismatch)
+  // hydrate selection from URL / remembered phone / real device detection (client only, avoids SSR mismatch)
   useEffect(() => {
     let alive = true;
-    const params = new URLSearchParams(window.location.search); // read before the URL-sync effect rewrites it
+    const params = new URLSearchParams(window.location.search);
     Promise.resolve(usePrefs.persist.rehydrate()).then(() => {
       if (!alive) return;
-      setModel(initialModel(p, params.get("model"), usePrefs.getState().phone?.slug));
-      const c = Number(params.get("color"));
-      if (c && p.colors.some((x) => x.id === c)) setColorId(c);
-      
-      // Auto detect user device
+      const urlModelSlug = params.get("model");
+      const savedPhone = usePrefs.getState().phone;
+
+      let detected: { name: string; model?: ProductModel } | null = null;
+
       if (typeof window !== "undefined") {
         const ua = navigator.userAgent;
-        let detected = "iPhone 16 Pro Max";
-        if (/iPhone/.test(ua)) {
-          if (/iPhone16,2|iPhone17/i.test(ua) || (window.screen.height >= 932)) {
-            detected = "iPhone 16 Pro Max";
-          } else if (window.screen.height >= 852) {
-            detected = "iPhone 16 Pro";
-          } else {
-            detected = "iPhone 15 Pro Max";
+        const isMobile = /iPhone|iPad|iPod|Android|Mobile/i.test(ua);
+
+        if (urlModelSlug) {
+          const m = p.models.find((x) => x.slug === urlModelSlug);
+          if (m) detected = { name: m.name, model: m };
+        } else if (savedPhone?.slug) {
+          const m = p.models.find(
+            (x) => x.slug === savedPhone.slug || x.name.toLowerCase() === savedPhone.name.toLowerCase(),
+          );
+          if (m) detected = { name: m.name, model: m };
+        } else if (isMobile) {
+          if (/iPhone/i.test(ua)) {
+            const w = Math.min(window.screen.width, window.screen.height);
+            const h = Math.max(window.screen.width, window.screen.height);
+            let name = "iPhone 15 Pro Max";
+            if (w === 440 && h === 956) name = "iPhone 16 Pro Max";
+            else if (w === 402 && h === 874) name = "iPhone 16 Pro";
+            else if (w === 430 && h === 932) name = "iPhone 15 Pro Max";
+            else if (w === 393 && h === 852) name = "iPhone 15 Pro";
+            else if (w === 428 && h === 926) name = "iPhone 14 Pro Max";
+            else if (w === 390 && h === 844) name = "iPhone 13";
+            const m = p.models.find(
+              (x) =>
+                x.name.toLowerCase() === name.toLowerCase() ||
+                x.slug.includes(name.toLowerCase().replace(/\s+/g, "-")),
+            );
+            if (m) detected = { name: m.name, model: m };
+          } else if (/Android/i.test(ua)) {
+            let name = "Galaxy S24 Ultra";
+            if (/SM-S938/i.test(ua)) name = "Galaxy S25 Ultra";
+            else if (/SM-S928/i.test(ua)) name = "Galaxy S24 Ultra";
+            else if (/SM-S918/i.test(ua)) name = "Galaxy S23 Ultra";
+            else if (/Pixel 9/i.test(ua)) name = "Pixel 9 Pro";
+            const m = p.models.find((x) => x.name.toLowerCase() === name.toLowerCase());
+            if (m) detected = { name: m.name, model: m };
           }
-        } else if (/Samsung|SM-S928|SM-S938/i.test(ua)) {
-          detected = "Galaxy S24 Ultra";
         }
-        setDetectedModel(detected);
       }
 
+      if (detected?.model) {
+        setModel(detected.model);
+        setDetectedModel(detected.name);
+        setPhone({ slug: detected.model.slug, name: detected.model.name, brand: detected.model.brand.slug });
+      } else {
+        const fallback = initialModel(p, urlModelSlug, savedPhone?.slug);
+        setModel(fallback);
+        setDetectedModel(null);
+      }
+
+      const c = Number(params.get("color"));
+      if (c && p.colors.some((x) => x.id === c)) setColorId(c);
       setReady(true);
     });
     return () => {

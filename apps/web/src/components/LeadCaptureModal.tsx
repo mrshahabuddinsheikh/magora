@@ -96,17 +96,9 @@ export function LeadCaptureModal() {
 
   if (pathname?.startsWith("/admin")) return null;
 
-  // Minimized floating trigger pill
-  if (minimized && !open && !localStorage.getItem("mg_lead_submitted")) {
-    return (
-      <button
-        onClick={() => setOpen(true)}
-        className="fixed bottom-20 left-4 z-40 flex items-center gap-2 rounded-full border border-amber-300 bg-gradient-to-r from-amber-400 to-amber-500 px-3.5 py-2 text-xs font-bold text-amber-950 shadow-lg transition hover:scale-105 sm:bottom-6 sm:left-6"
-      >
-        <Gift size={16} className="animate-bounce" />
-        <span>Rs. 300 OFF Code</span>
-      </button>
-    );
+  // Minimized floating trigger pill removed per user request
+  if (minimized && !open) {
+    return null;
   }
 
   if (!open) return null;

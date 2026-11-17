@@ -232,10 +232,33 @@ export function WhatsAppButton() {
     return `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(text)}`;
   };
 
+  const handleSelectCustomModel = (modelName: string) => {
+    const trimmed = modelName.trim();
+    if (!trimmed) return;
+    const match = POPULAR_PHONES.find((p) => p.name.toLowerCase() === trimmed.toLowerCase()) || {
+      slug: trimmed.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
+      name: trimmed,
+      brand: "Custom",
+    };
+    setSelectedPhone(match);
+    setStep("product");
+    setMessages((prev) => [
+      ...prev,
+      { id: String(Date.now()), sender: "user", text: trimmed, time: "Just now" },
+      { id: String(Date.now() + 1), sender: "bot", text: `Aala intikhab! ${trimmed} ke liye konsi item chahiye? Neeche select karein.`, time: "Just now" },
+    ]);
+  };
+
   const handleSendMessage = (e?: React.FormEvent) => {
     e?.preventDefault();
     const query = inputText.trim();
     if (!query) return;
+
+    if (step === "phone") {
+      handleSelectCustomModel(query);
+      setInputText("");
+      return;
+    }
 
     const now = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
     const userMsg: ChatMessage = { id: String(Date.now()), sender: "user", text: query, time: now };
@@ -301,6 +324,7 @@ export function WhatsAppButton() {
           cartId,
           customer: { name: form.name.trim(), phone: form.phone.trim() },
           address: { city: form.city, line1: form.address.trim() },
+          notes: `Ordered via AI Assistant for phone model: ${selectedPhone?.name ?? ""}`,
           paymentMethod: "cod",
           source: "web",
         },
@@ -327,27 +351,6 @@ export function WhatsAppButton() {
     <>
       {/* ───── Fixed Floating Action Button (10s WhatsApp / 1min Chatbot cycle) ───── */}
       <div className="fixed bottom-5 right-5 z-40 flex items-center gap-3">
-        {/* Subtle tooltip pill indicating active assistant */}
-        {!open && (
-          <div
-            onClick={() => {
-              if (mode === "chatbot") setOpen(true);
-              else window.open(buildWhatsAppUrl(), "_blank");
-            }}
-            className="glass cursor-pointer rounded-full px-3.5 py-1.5 text-xs font-semibold shadow-md transition hover:scale-105"
-          >
-            {mode === "chatbot" ? (
-              <span className="flex items-center gap-1.5 text-ink">
-                <Sparkles size={13} className="text-[#38bdf8]" /> 3D AI Assistant
-              </span>
-            ) : (
-              <span className="flex items-center gap-1.5 text-ink">
-                <span className="h-2 w-2 rounded-full bg-[#25d366]" /> Chat on WhatsApp
-              </span>
-            )}
-          </div>
-        )}
-
         {/* Floating Bubble Button */}
         {open ? (
           <button
@@ -468,33 +471,57 @@ export function WhatsAppButton() {
               <div className="card space-y-2.5 p-3.5 border border-black/5 bg-white/95">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-accent">Step 1 of 3</span>
-                  <span className="text-[11px] text-muted">Select your phone</span>
+                  <span className="text-[11px] text-muted">Select or type your model</span>
                 </div>
-                <input
-                  type="text"
-                  placeholder="Apna phone model search karein..."
-                  value={phoneSearch}
-                  onChange={(e) => setPhoneSearch(e.target.value)}
-                  className="input h-8 text-xs"
-                />
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="Apna phone model type karein (e.g. Note 40, S24, Vivo)..."
+                    value={phoneSearch}
+                    onChange={(e) => setPhoneSearch(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && phoneSearch.trim()) {
+                        e.preventDefault();
+                        handleSelectCustomModel(phoneSearch.trim());
+                      }
+                    }}
+                    className="input h-9 text-xs flex-1"
+                  />
+                  {phoneSearch.trim() && (
+                    <button
+                      type="button"
+                      onClick={() => handleSelectCustomModel(phoneSearch.trim())}
+                      className="btn btn-primary h-9 px-3 text-xs font-bold shrink-0"
+                    >
+                      Use &rarr;
+                    </button>
+                  )}
+                </div>
+
+                {phoneSearch.trim() && (
+                  <button
+                    type="button"
+                    onClick={() => handleSelectCustomModel(phoneSearch.trim())}
+                    className="w-full flex items-center justify-between rounded-xl bg-accent/10 border border-accent/30 p-2 text-left text-xs font-bold text-accent hover:bg-accent hover:text-white transition"
+                  >
+                    <span>✍️ Type kiya hua model: &ldquo;{phoneSearch.trim()}&rdquo;</span>
+                    <span className="text-[11px] underline">Continue &rarr;</span>
+                  </button>
+                )}
+
                 <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto pt-1">
                   {filteredPhones.map((m) => (
                     <button
                       key={m.slug}
-                      onClick={() => {
-                        setSelectedPhone(m);
-                        setStep("product");
-                        setMessages((prev) => [
-                          ...prev,
-                          { id: String(Date.now()), sender: "user", text: m.name, time: "Just now" },
-                          { id: String(Date.now() + 1), sender: "bot", text: `Aala intikhab! ${m.name} ke liye konsi item chahiye?`, time: "Just now" },
-                        ]);
-                      }}
+                      onClick={() => handleSelectCustomModel(m.name)}
                       className="chip text-[12px] hover:!bg-accent hover:!text-white transition"
                     >
                       {m.name}
                     </button>
                   ))}
+                  {filteredPhones.length === 0 && !phoneSearch.trim() && (
+                    <p className="text-xs text-muted py-1">Apna model upar type karein.</p>
+                  )}
                 </div>
               </div>
             )}
