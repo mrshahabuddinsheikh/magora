@@ -58,6 +58,26 @@ export function shippingFor(subtotalAfterDiscount: number, freeShipping: boolean
   return subtotalAfterDiscount >= store.shipping.freeAbove ? 0 : store.shipping.flatRate;
 }
 
+export async function getCodSettings(tx: Tx = db) {
+  try {
+    const [row] = await tx.select().from(s.codSettings).where(eq(s.codSettings.id, 1));
+    if (row) return row;
+  } catch {}
+  return {
+    id: 1,
+    enabled: true,
+    threshold: 2000,
+    feeBelow: 50,
+    feeAbove: 100,
+  };
+}
+
+export function computeCodFee(subtotalAfterDiscount: number, settings: { enabled: boolean; threshold: number; feeBelow: number; feeAbove: number }) {
+  if (!settings.enabled) return 0;
+  return subtotalAfterDiscount < settings.threshold ? settings.feeBelow : settings.feeAbove;
+}
+
+
 /**
  * "Frequently bought together": when the cart has 2+ different kinds (case / skin / protector)
  * for the SAME phone, those lines get store.bundle.percent off.
@@ -157,7 +177,8 @@ export async function computeCart(cartId: string, tx: Tx = db) {
   const c = await couponDiscount(cart.couponCode, subtotal - bundle.discount, tx);
   const discount = bundle.discount + c.discount;
   const shipping = shippingFor(subtotal - discount, c.freeShipping);
-  const codFee = store.cod.fee;
+  const codSettings = await getCodSettings(tx);
+  const codFee = computeCodFee(subtotal - discount, codSettings);
   return {
     id: cart.id,
     items,
@@ -172,6 +193,12 @@ export async function computeCart(cartId: string, tx: Tx = db) {
       couponDiscount: c.discount,
       shipping,
       codFee,
+      codSettings: {
+        enabled: codSettings.enabled,
+        threshold: codSettings.threshold,
+        feeBelow: codSettings.feeBelow,
+        feeAbove: codSettings.feeAbove,
+      },
       total: subtotal - discount + shipping,
       savings: savings + discount,
       freeShippingAbove: store.shipping.freeAbove,

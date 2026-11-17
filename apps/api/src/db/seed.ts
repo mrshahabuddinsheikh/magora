@@ -241,6 +241,20 @@ if (!existingTrustSettings) {
   console.log("✓ Seeded trust settings");
 }
 
+/* COD settings (tiered handling fee) */
+const [existingCodSettings] = await db.select().from(s.codSettings).where(eq(s.codSettings.id, 1));
+if (!existingCodSettings) {
+  await db.insert(s.codSettings).values({
+    id: 1,
+    enabled: true,
+    threshold: 2000,
+    feeBelow: 50,
+    feeAbove: 100,
+  });
+  console.log("✓ Seeded COD settings");
+}
+
+
 /* trust signals (social proof sales popups) */
 const defaultSignals = [
   { city: "Lahore", productName: "Crystal Clear MagSafe Case", productSlug: "crystal-clear-magsafe-case", material: "clear", colorHex: "#f4f7fb", modelName: "iPhone 16 Pro Max", timeAgoText: "2 min ago", sort: 1 },

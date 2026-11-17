@@ -130,8 +130,24 @@ export function CouponBox({ cart }: { cart: Cart }) {
   );
 }
 
-export function Totals({ cart, showTotalLabel = "Total" }: { cart: Cart; showTotalLabel?: string }) {
+export function Totals({
+  cart,
+  paymentMethod = "cod",
+  showTotalLabel = "Total",
+}: {
+  cart: Cart;
+  paymentMethod?: string;
+  showTotalLabel?: string;
+}) {
   const t = cart.totals;
+  const isCod = paymentMethod === "cod";
+  const codSettings = t.codSettings ?? { enabled: true, threshold: 2000, feeBelow: 50, feeAbove: 100 };
+  const effectiveSubtotal = t.subtotal - t.discount;
+  const codFee = isCod && codSettings.enabled
+    ? (effectiveSubtotal < codSettings.threshold ? codSettings.feeBelow : codSettings.feeAbove)
+    : 0;
+  const finalTotal = effectiveSubtotal + t.shipping + codFee;
+
   return (
     <dl className="space-y-1.5 text-[14.5px]">
       <div className="flex justify-between"><dt className="text-muted">Subtotal</dt><dd className="tabular-nums">{money(t.subtotal)}</dd></div>
@@ -142,7 +158,16 @@ export function Totals({ cart, showTotalLabel = "Total" }: { cart: Cart; showTot
         <div className="flex justify-between text-success"><dt>{cart.coupon ? `Coupon ${cart.coupon.code}` : "Discount"}</dt><dd className="tabular-nums">−{money(t.discount - (t.bundleDiscount ?? 0))}</dd></div>
       )}
       <div className="flex justify-between"><dt className="text-muted">Delivery</dt><dd className="tabular-nums">{t.shipping === 0 ? <span className="font-medium text-success">FREE</span> : money(t.shipping)}</dd></div>
-      <div className="flex justify-between border-t border-line pt-2.5 text-[17px] font-bold"><dt>{showTotalLabel}</dt><dd className="tabular-nums">{money(t.total)}</dd></div>
+      {isCod && codFee > 0 && (
+        <div className="flex justify-between items-center text-ink/90">
+          <dt className="text-muted flex items-center gap-1.5">
+            <span>Cash on Delivery handling</span>
+            <span className="text-[11px] font-normal text-muted/80">({effectiveSubtotal < codSettings.threshold ? `< Rs.${codSettings.threshold}` : `≥ Rs.${codSettings.threshold}`})</span>
+          </dt>
+          <dd className="tabular-nums font-semibold">{money(codFee)}</dd>
+        </div>
+      )}
+      <div className="flex justify-between border-t border-line pt-2.5 text-[17px] font-bold"><dt>{showTotalLabel}</dt><dd className="tabular-nums">{money(finalTotal)}</dd></div>
       {t.savings > 0 && <p className="text-right text-xs font-medium text-success">You save {money(t.savings)}</p>}
     </dl>
   );

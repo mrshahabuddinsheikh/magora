@@ -101,7 +101,7 @@ async function Results({ searchParams }: { searchParams: Promise<SP> }) {
         </div>
       ) : (
         <div className="mt-5 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4">
-          {res.data.map((p, i) => (
+          {(res?.data ?? []).map((p, i) => (
             <ProductCard
               key={p.id}
               p={p}

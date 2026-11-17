@@ -10,6 +10,7 @@ import { revalidateWeb } from "../lib/revalidate";
 import { phoneSearchText, slugify } from "../lib/text";
 import { ORDER_STATUSES } from "../lib/types";
 import { STATUS_LABEL, loadOrder, presentOrder, restock } from "./orders";
+import { getCodSettings } from "./cart";
 import { adminReturnRoutes } from "./returns";
 import { addShipmentEvent, stampsFor, upsertShipment } from "./tracking";
 import { SHIPMENT_STATUSES, type ShipmentStatus } from "../lib/types";
@@ -1441,6 +1442,49 @@ export async function adminRoutes(app: FastifyInstance) {
       }
       invalidate("social-proof");
       return { data: val };
+    },
+  );
+
+  /* COD settings (tiered handling fee) */
+  app.get("/cod-settings", { schema: { tags, security } }, async () => {
+    const settings = await getCodSettings();
+    return { data: settings };
+  });
+
+  app.post(
+    "/cod-settings",
+    {
+      schema: {
+        tags,
+        security,
+        body: Type.Object({
+          enabled: Type.Boolean(),
+          threshold: Type.Integer({ minimum: 0 }),
+          feeBelow: Type.Integer({ minimum: 0 }),
+          feeAbove: Type.Integer({ minimum: 0 }),
+        }),
+      },
+    },
+    async (req) => {
+      const { enabled, threshold, feeBelow, feeAbove } = req.body as {
+        enabled: boolean;
+        threshold: number;
+        feeBelow: number;
+        feeAbove: number;
+      };
+      const [existing] = await db.select().from(s.codSettings).where(eq(s.codSettings.id, 1));
+      if (existing) {
+        await db
+          .update(s.codSettings)
+          .set({ enabled, threshold, feeBelow, feeAbove })
+          .where(eq(s.codSettings.id, 1));
+      } else {
+        await db
+          .insert(s.codSettings)
+          .values({ id: 1, enabled, threshold, feeBelow, feeAbove });
+      }
+      invalidate("store");
+      return { data: { id: 1, enabled, threshold, feeBelow, feeAbove } };
     },
   );
 }

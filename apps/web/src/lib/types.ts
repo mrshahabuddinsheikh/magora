@@ -84,6 +84,7 @@ export interface Cart {
   bundles?: { model: string; kinds: string[]; discount: number }[];
   totals: {
     subtotal: number; discount: number; bundleDiscount?: number; couponDiscount?: number; shipping: number; codFee: number;
+    codSettings?: { enabled: boolean; threshold: number; feeBelow: number; feeAbove: number };
     total: number; savings: number; freeShippingRemaining: number; freeShippingAbove?: number;
   };
   currency: string; hasIssues: boolean;
@@ -94,7 +95,7 @@ export interface StoreInfo {
   name: string; tagline: string; currency: string; currencySymbol: string;
   supportPhone: string; supportWhatsapp: string; supportEmail: string;
   shipping: { flatRate: number; freeAbove: number; etaDays: string; etaByCity?: Record<string, [number, number]>; etaDefault?: [number, number] };
-  cod: { enabled: boolean; fee: number; maxOrderTotal: number };
+  cod: { enabled: boolean; fee: number; maxOrderTotal: number; threshold?: number; feeBelow?: number; feeAbove?: number };
   returnsDays: number; cities: string[]; paymentMethods: PaymentMethod[];
 }
 

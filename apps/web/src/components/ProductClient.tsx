@@ -346,26 +346,23 @@ export function ProductClient({ product: p, delivery }: { product: Product; deli
             </div>
 
             {/* step 1 */}
-            <div className="mt-6">
+            <div className="mt-5">
               {detectedModel && (
                 <div className="mb-3 flex items-center gap-2 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 px-3.5 py-2 text-xs text-emerald-800 dark:text-emerald-300 font-medium">
                   <Sparkles size={15} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
                   <span>Detected your device: <b className="text-ink">{detectedModel}</b> — Showing precision compatible fit</span>
                 </div>
               )}
-              <div className="mb-2.5 flex items-center justify-between">
+              <div className="mb-2 flex items-center justify-between">
                 <h2 className="flex items-center gap-2 text-[15px] font-bold">
                   <span className="grid h-6 w-6 place-items-center rounded-full bg-ink text-[12px] text-white">1</span> Choose your phone
                 </h2>
-                <span className="flex items-center gap-1 text-[13px] font-medium text-accent">
-                  <Smartphone size={14} /> {model.name}
-                </span>
               </div>
               <ModelPicker models={p.models} value={model.slug} onChange={(m) => choose(m as ProductModel)} />
             </div>
 
             {/* step 2 */}
-            <div className={cn("mt-6", p.colors.length < 2 && "hidden")}>
+            <div className={cn("mt-4", p.colors.length < 2 && "hidden")}>
               <h2 className="mb-2.5 flex items-center gap-2 text-[15px] font-bold">
                 <span className="grid h-6 w-6 place-items-center rounded-full bg-ink text-[12px] text-white">2</span> {mode === "protector" ? (p.material === "lens" ? "Ring colour:" : "Pack:") : mode === "skin" || p.colors.some((c) => pv.mode === "design" && c.designUrl) ? "Design:" : "Colour:"}
                 <span className="font-medium text-muted">{color.name}</span>
@@ -424,79 +421,11 @@ export function ProductClient({ product: p, delivery }: { product: Product; deli
               )}
             </div>
 
-            {/* 3D Custom Name / Initials Engraving */}
-            {mode === "case" && (
-              <div className="mt-6 rounded-2xl border border-line bg-black/[0.02] dark:bg-white/[0.02] p-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="grid h-6 w-6 place-items-center rounded-full bg-ink text-[12px] text-white">✨</span>
-                    <div>
-                      <h3 className="text-sm font-bold text-ink">Custom Name / Monogram Engraving</h3>
-                      <p className="text-[11px] text-muted">Precision laser printed directly onto your 3D case</p>
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setEngravingEnabled(!engravingEnabled)}
-                    className={cn(
-                      "rounded-full px-3 py-1 text-xs font-bold transition",
-                      engravingEnabled ? "bg-accent text-white" : "bg-black/10 dark:bg-white/10 text-ink hover:bg-black/20"
-                    )}
-                  >
-                    {engravingEnabled ? "Enabled (FREE)" : "+ Add Engraving"}
-                  </button>
-                </div>
-
-                {engravingEnabled && (
-                  <div className="pt-2 space-y-2.5">
-                    <div>
-                      <label className="text-[11px] font-medium text-muted block mb-1">Your Name or Initials (Max 12 letters)</label>
-                      <input
-                        type="text"
-                        maxLength={12}
-                        placeholder="e.g. SHERRY or M.A"
-                        value={engravingText}
-                        onChange={(e) => setEngravingText(e.target.value.toUpperCase())}
-                        className="input w-full uppercase tracking-widest font-mono text-sm"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[11px] font-medium text-muted block mb-1">Font Style</label>
-                      <div className="grid grid-cols-3 gap-2">
-                        {(
-                          [
-                            ["sans", "Bold Sans", "font-sans font-bold tracking-wider"],
-                            ["serif", "Luxury Serif", "font-serif tracking-widest"],
-                            ["script", "Signature Script", "italic tracking-wide"],
-                          ] as const
-                        ).map(([f, label, cl]) => (
-                          <button
-                            key={f}
-                            type="button"
-                            onClick={() => setEngravingFont(f)}
-                            className={cn(
-                              "rounded-xl border p-2 text-xs transition",
-                              engravingFont === f
-                                ? "border-ink bg-ink text-white dark:border-white dark:bg-white dark:text-neutral-950 font-bold shadow-sm"
-                                : "border-line bg-white/70 hover:border-ink/50 text-ink dark:border-white/15 dark:bg-white/10 dark:text-neutral-200",
-                              cl
-                            )}
-                          >
-                            {label}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
             {/* skins: photo upload */}
             {isCustom && (
               <div id="photo-step" className="mt-6 scroll-mt-28">
                 <h2 className="mb-2.5 flex items-center gap-2 text-[15px] font-bold">
-                  <span className="grid h-6 w-6 place-items-center rounded-full bg-ink text-[12px] text-white">2</span> Upload your photo
+                  <span className="grid h-6 w-6 place-items-center rounded-full bg-ink text-[12px] text-white">3</span> Upload your photo
                 </h2>
                 <label
                   className={cn(
@@ -535,7 +464,7 @@ export function ProductClient({ product: p, delivery }: { product: Product; deli
             {mode === "skin" && (
               <div className="mt-6">
                 <h2 className="mb-2.5 flex items-center gap-2 text-[15px] font-bold">
-                  <span className="grid h-6 w-6 place-items-center rounded-full bg-ink text-[12px] text-white">3</span> Coverage
+                  <span className="grid h-6 w-6 place-items-center rounded-full bg-ink text-[12px] text-white">4</span> Coverage
                 </h2>
                 <div className="grid grid-cols-2 gap-2">
                   {(
@@ -602,6 +531,75 @@ export function ProductClient({ product: p, delivery }: { product: Product; deli
               WhatsApp Par Order Karein (1-Click)
             </a>
             {cartError && <p className="mt-2 text-sm text-danger">{cartError}</p>}
+
+            {/* 3D Custom Name / Initials Engraving */}
+            {mode === "case" && (
+              <div className="mt-4 rounded-2xl border border-line bg-black/[0.02] dark:bg-white/[0.02] p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="grid h-6 w-6 place-items-center rounded-full bg-ink text-[12px] text-white">✨</span>
+                    <div>
+                      <h3 className="text-sm font-bold text-ink">Custom Name / Monogram Engraving</h3>
+                      <p className="text-[11px] text-muted">Precision laser printed directly onto your 3D case</p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setEngravingEnabled(!engravingEnabled)}
+                    className={cn(
+                      "rounded-full px-3 py-1 text-xs font-bold transition",
+                      engravingEnabled ? "bg-accent text-white" : "bg-black/10 dark:bg-white/10 text-ink hover:bg-black/20"
+                    )}
+                  >
+                    {engravingEnabled ? "Enabled (FREE)" : "+ Add Engraving"}
+                  </button>
+                </div>
+
+                {engravingEnabled && (
+                  <div className="pt-2 space-y-2.5">
+                    <div>
+                      <label className="text-[11px] font-medium text-muted block mb-1">Your Name or Initials (Max 12 letters)</label>
+                      <input
+                        type="text"
+                        maxLength={12}
+                        placeholder="e.g. SHERRY or M.A"
+                        value={engravingText}
+                        onChange={(e) => setEngravingText(e.target.value.toUpperCase())}
+                        className="input w-full uppercase tracking-widest font-mono text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[11px] font-medium text-muted block mb-1">Font Style</label>
+                      <div className="grid grid-cols-3 gap-2">
+                        {(
+                          [
+                            ["sans", "Bold Sans", "font-sans font-bold tracking-wider"],
+                            ["serif", "Luxury Serif", "font-serif tracking-widest"],
+                            ["script", "Signature Script", "italic tracking-wide"],
+                          ] as const
+                        ).map(([f, label, cl]) => (
+                          <button
+                            key={f}
+                            type="button"
+                            onClick={() => setEngravingFont(f)}
+                            className={cn(
+                              "rounded-xl border p-2 text-xs transition",
+                              engravingFont === f
+                                ? "border-ink bg-ink text-white dark:border-white dark:bg-white dark:text-neutral-950 font-bold shadow-sm"
+                                : "border-line bg-white/70 hover:border-ink/50 text-ink dark:border-white/15 dark:bg-white/10 dark:text-neutral-200",
+                              cl
+                            )}
+                          >
+                            {label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
             {delivery && !soldOut && <DeliveryEstimate info={delivery} madeToOrder={isCustom ? 2 : 0} />}
 
             <div className="mt-5 grid grid-cols-2 gap-2 text-[12.5px]">

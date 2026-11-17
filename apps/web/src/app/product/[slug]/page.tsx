@@ -14,9 +14,13 @@ import { SITE_URL } from "@/lib/config";
 
 /** Pre-render the best sellers at build; every other product renders once on first visit, then is cached. */
 export async function generateStaticParams() {
-  const res = await getProducts({ limit: 30 });
-  const slugs = res.data.map((p) => ({ slug: p.slug }));
-  return slugs.length ? slugs : [{ slug: "crystal-clear-magsafe-case" }];
+  try {
+    const res = await getProducts({ limit: 30 });
+    const slugs = res?.data?.map((p) => ({ slug: p.slug })) ?? [];
+    return slugs.length ? slugs : [{ slug: "crystal-clear-magsafe-case" }];
+  } catch {
+    return [{ slug: "crystal-clear-magsafe-case" }];
+  }
 }
 
 export async function generateMetadata(props: PageProps<"/product/[slug]">): Promise<Metadata> {

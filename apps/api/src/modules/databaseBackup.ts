@@ -128,7 +128,7 @@ export async function databaseBackupRoutes(app: FastifyInstance) {
     const tables = [
       "products", "variants", "categories", "product_brands", "custom_styles",
       "orders", "order_items", "users", "customer_leads", "shoppable_reels",
-      "reviews", "coupons", "trust_signals", "trust_settings", "return_requests"
+      "reviews", "coupons", "trust_signals", "trust_settings", "cod_settings", "return_requests"
     ];
 
     const exportData: Record<string, unknown[]> = {};

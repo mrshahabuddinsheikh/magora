@@ -50,6 +50,21 @@ export function Overview({ go }: { go: (tab: string, extra?: string) => void }) 
         ))}
       </div>
 
+      <div className="rounded-2xl bg-emerald-500/10 border border-emerald-500/20 p-3.5 flex items-center justify-between text-xs sm:text-sm">
+        <div className="flex items-center gap-2.5">
+          <Banknote size={18} className="text-emerald-600 shrink-0" />
+          <span className="text-emerald-900 dark:text-emerald-300">
+            <b>Cash on Delivery (COD) Rules:</b> Under Rs.2,000 &rarr; <b>Rs.50 fee</b> | Rs.2,000+ &rarr; <b>Rs.100 fee</b> (Rs.0 on online payments)
+          </span>
+        </div>
+        <button
+          onClick={() => go("cod-settings")}
+          className="ml-3 shrink-0 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 text-xs font-bold transition shadow-sm"
+        >
+          Manage Fees &rarr;
+        </button>
+      </div>
+
       <div className="grid gap-4 xl:grid-cols-[1.6fr_1fr]">
         <div className="card p-5">
           <div className="flex items-end justify-between">

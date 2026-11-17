@@ -91,16 +91,16 @@ export default async function Home() {
       <section className="mt-16">
         <SectionTitle eyebrow="Find your fit" title="Shop by phone" href="/shop?category=magsafe-cases" />
         <div className="grid gap-4 md:grid-cols-3">
-          {brands.map((b) => (
+          {(brands ?? []).map((b) => (
             <div key={b.slug} className="card p-5">
               <div className="flex items-center justify-between">
                 <h3 className="text-xl font-bold">{b.name}</h3>
                 <Link href={`/shop?category=magsafe-cases&brand=${b.slug}`} className="text-sm font-semibold text-accent">
-                  All {b.models.length} →
+                  All {b.models?.length ?? 0} →
                 </Link>
               </div>
               <div className="mt-4 flex flex-wrap gap-2">
-                {b.models.slice(0, 7).map((m) => (
+                {(b.models ?? []).slice(0, 7).map((m) => (
                   <Link key={m.slug} href={`/shop?category=magsafe-cases&model=${m.slug}`} className="chip" prefetch={false}>
                     <Smartphone size={13} /> {shortModel(m.name)}
                   </Link>
@@ -115,7 +115,7 @@ export default async function Home() {
       <section className="mt-16">
         <SectionTitle eyebrow="Top trending" title="Best-selling MagSafe cases" href="/shop?category=magsafe-cases" />
         <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-          {featured.data.map((p, i) => (
+          {(featured?.data ?? []).map((p, i) => (
             <ProductCard key={p.id} p={p} priority={i < 4} />
           ))}
         </div>

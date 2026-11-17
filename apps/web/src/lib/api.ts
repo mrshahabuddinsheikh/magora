@@ -22,14 +22,16 @@ export async function getStore() {
   "use cache";
   cacheLife("hours");
   cacheTag("store");
-  return (await get<{ data: StoreInfo }>("/store"))?.data ?? null;
+  const res = await get<{ data: StoreInfo }>("/store");
+  return res?.data ?? null;
 }
 
 export async function getBrands() {
   "use cache";
   cacheLife("hours");
   cacheTag("models");
-  return (await get<{ data: BrandWithModels[] }>("/brands"))?.data ?? [];
+  const res = await get<{ data: BrandWithModels[] }>("/brands");
+  return Array.isArray(res?.data) ? res.data : [];
 }
 
 export async function getProducts(params: Record<string, string | number | undefined> = {}) {
@@ -38,7 +40,9 @@ export async function getProducts(params: Record<string, string | number | undef
   cacheTag("products");
   const qs = new URLSearchParams();
   for (const [k, v] of Object.entries(params)) if (v !== undefined && v !== "") qs.set(k, String(v));
-  return (await get<Paged<ProductListItem>>(`/products?${qs}`)) ?? { data: [], meta: { page: 1, limit: 24, total: 0, hasMore: false } };
+  const res = await get<Paged<ProductListItem>>(`/products?${qs}`);
+  if (res && Array.isArray(res.data)) return res;
+  return { data: [], meta: { page: 1, limit: 24, total: 0, hasMore: false } };
 }
 
 export async function getProduct(slug: string) {

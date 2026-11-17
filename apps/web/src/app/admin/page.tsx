@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { BarChart3, Bell, Boxes, Building2, ClipboardList, Contact2, Database, LogOut, MessageSquare, Package, Palette, PhoneCall, PieChart, Radio, RotateCcw, ShieldCheck, Smartphone, Store, Tag, Truck, Users, Video } from "lucide-react";
+import { Banknote, BarChart3, Bell, Boxes, Building2, ClipboardList, Contact2, Database, LogOut, MessageSquare, Package, Palette, PhoneCall, PieChart, Radio, RotateCcw, ShieldCheck, Smartphone, Store, Tag, Truck, Users, Video } from "lucide-react";
 import { useAuth } from "@/stores/auth";
 import { cn } from "@/lib/format";
 import { Logo } from "@/components/Header";
@@ -19,11 +19,13 @@ import { TrustSignalsManager } from "@/components/admin/TrustSignalsManager";
 import { CustomerLeadsManager } from "@/components/admin/CustomerLeadsManager";
 import { ReelsManager } from "@/components/admin/ReelsManager";
 import { DatabaseBackupManager } from "@/components/admin/DatabaseBackupManager";
+import { CodSettingsManager } from "@/components/admin/CodSettingsManager";
 import { api } from "@/lib/client-api";
 
-type Tab = "overview" | "backup" | "confirm" | "desk" | "return-report" | "alerts" | "orders" | "deliveries" | "returns" | "customers" | "leads" | "reels" | "products" | "brands" | "categories" | "trust" | "coupons" | "models" | "reviews" | "security";
+type Tab = "overview" | "backup" | "cod-settings" | "security" | "confirm" | "desk" | "return-report" | "alerts" | "orders" | "deliveries" | "returns" | "customers" | "leads" | "reels" | "products" | "brands" | "categories" | "trust" | "coupons" | "models" | "reviews";
 const TABS: [Tab, string, typeof Store][] = [
   ["overview", "Dashboard", BarChart3],
+  ["cod-settings", "Cash on Delivery (COD) Charges", Banknote],
   ["backup", "Database Backup & Restore", Database],
   ["security", "Cyber Security Shield", ShieldCheck],
   ["confirm", "Confirm COD orders", PhoneCall],
@@ -146,6 +148,7 @@ export default function AdminPage() {
       <section className="min-w-0" key={key}>
         <h1 className="mb-4 text-[26px] font-bold tracking-tight">{TABS.find(([t]) => t === tab)?.[1]}</h1>
         {tab === "overview" && <Overview go={go} />}
+        {tab === "cod-settings" && <CodSettingsManager />}
         {tab === "backup" && <DatabaseBackupManager />}
         {tab === "security" && <SecurityShield />}
         {tab === "confirm" && <CodConfirm openOrder={(n) => go("orders", `#${n}`)} />}

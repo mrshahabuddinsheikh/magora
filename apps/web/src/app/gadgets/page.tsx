@@ -19,13 +19,17 @@ const section = CATEGORIES[3];
 
 export default async function GadgetsHome() {
   const all = await getProducts({ category: "gadgets", limit: 60 });
+  const allList = all?.data ?? [];
   // one hero product per type, in the order of the menu
-  const heroSlugs = section.styles.map((s) => all.data.find((p) => p.category === s.cat)?.slug).filter((s): s is string => !!s);
+  const heroSlugs = section.styles.map((s) => allList.find((p) => p.category === s.cat)?.slug).filter((s): s is string => !!s);
   const heroData = (await Promise.all(heroSlugs.map((s) => getProduct(s)))).filter((p) => p !== null);
   const stage: StageGadget[] = heroData.map((p) => ({ slug: p.slug, name: p.name, material: p.material, price: p.minPrice, colors: p.colors }));
-  const best = all.data.filter((p) => p.badge === "Best Seller").concat(all.data.filter((p) => p.badge !== "Best Seller")).slice(0, 8);
-  const from = (cat?: string) => Math.min(...all.data.filter((p) => p.category === cat).map((p) => p.price));
-  const magnetic = all.data.find((p) => p.slug === "magsafe-power-bank-5000");
+  const best = allList.filter((p) => p.badge === "Best Seller").concat(allList.filter((p) => p.badge !== "Best Seller")).slice(0, 8);
+  const from = (cat?: string) => {
+    const prices = allList.filter((p) => p.category === cat).map((p) => p.price);
+    return prices.length ? Math.min(...prices) : 0;
+  };
+  const magnetic = allList.find((p) => p.slug === "magsafe-power-bank-5000");
 
   return (
     <>

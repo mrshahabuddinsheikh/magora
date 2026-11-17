@@ -651,3 +651,14 @@ export const shoppableReels = mysqlTable("shoppable_reels", {
   sort: int("sort").notNull().default(0),
   ...timestamps,
 });
+
+/* ───────────── Cash on Delivery (COD) Dynamic Charges ───────────── */
+
+export const codSettings = mysqlTable("cod_settings", {
+  id: int("id").primaryKey().autoincrement(),
+  enabled: boolean("enabled").notNull().default(true),
+  threshold: int("threshold").notNull().default(2000), // Rs. 2,000
+  feeBelow: int("fee_below").notNull().default(50),     // Rs. 50 if order amount < threshold
+  feeAbove: int("fee_above").notNull().default(100),    // Rs. 100 if order amount >= threshold
+});
+

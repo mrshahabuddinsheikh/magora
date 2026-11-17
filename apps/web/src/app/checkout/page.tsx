@@ -130,6 +130,14 @@ export default function CheckoutPage() {
 
   const methods: PaymentMethod[] = store?.paymentMethods ?? [{ id: "cod", name: "Cash on Delivery", description: "Pay in cash when your order arrives.", kind: "cod", enabled: true }];
 
+  const isCod = method === "cod";
+  const codSettings = cart?.totals.codSettings ?? store?.cod ?? { enabled: true, threshold: 2000, feeBelow: 50, feeAbove: 100 };
+  const effectiveSubtotal = (cart?.totals.subtotal ?? 0) - (cart?.totals.discount ?? 0);
+  const codFee = isCod && (codSettings.enabled ?? true)
+    ? (effectiveSubtotal < (codSettings.threshold ?? 2000) ? (codSettings.feeBelow ?? 50) : (codSettings.feeAbove ?? 100))
+    : 0;
+  const finalTotal = effectiveSubtotal + (cart?.totals.shipping ?? 0) + codFee;
+
   return (
     <div>
       <Link href="/cart" className="mb-3 inline-flex items-center gap-1 text-sm text-muted hover:text-ink"><ArrowLeft size={15} /> Back to bag</Link>
@@ -214,10 +222,10 @@ export default function CheckoutPage() {
             ))}
           </ul>
           <CouponBox cart={cart} />
-          <Totals cart={cart} showTotalLabel={method === "cod" ? "Pay on delivery" : "Total"} />
+          <Totals cart={cart} paymentMethod={method} showTotalLabel={method === "cod" ? "Pay on delivery" : "Total"} />
           {err && <p className="rounded-xl bg-[#fde8e8] p-3 text-sm text-danger">{err}</p>}
           <button className="btn btn-primary h-[54px] w-full text-[16px]" onClick={place} disabled={busy || cart.hasIssues}>
-            <Lock size={17} /> {busy ? "Placing order…" : `Place order · ${money(cart.totals.total)}`}
+            <Lock size={17} /> {busy ? "Placing order…" : `Place order · ${money(finalTotal)}`}
           </button>
           <p className="flex items-center justify-center gap-1.5 text-center text-xs text-muted">
             <ShieldCheck size={14} /> No advance payment. We’ll call to confirm your order.

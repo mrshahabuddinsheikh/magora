@@ -8,6 +8,7 @@ import { notFound } from "../lib/errors";
 import { normalize } from "../lib/text";
 import { store } from "../config";
 import { paymentMethods } from "../payments";
+import { getCodSettings } from "./cart";
 import { phoneDetails } from "../lib/phoneDetails";
 import type { CameraSpec } from "../lib/types";
 
@@ -149,7 +150,20 @@ export async function catalogRoutes(app: FastifyInstance) {
   /* store settings for apps */
   app.get("/store", { schema: { tags: ["Store"], summary: "Store settings: currency, shipping, cities, payment methods" } }, async (_req, reply) => {
     reply.header("cache-control", CACHE_HEADER);
-    return { data: { ...store, paymentMethods: paymentMethods() } };
+    const codSettings = await getCodSettings();
+    return {
+      data: {
+        ...store,
+        cod: {
+          ...store.cod,
+          enabled: codSettings.enabled,
+          threshold: codSettings.threshold,
+          feeBelow: codSettings.feeBelow,
+          feeAbove: codSettings.feeAbove,
+        },
+        paymentMethods: paymentMethods(),
+      },
+    };
   });
 
   /* brands with their models — powers the brand → model picker */
