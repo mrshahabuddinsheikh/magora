@@ -347,10 +347,17 @@ export function WhatsAppButton() {
 
   if (p?.startsWith("/admin")) return null;
 
+  const isProductPage = p?.startsWith("/product/");
+
   return (
     <>
       {/* ───── Fixed Floating Action Button (10s WhatsApp / 1min Chatbot cycle) ───── */}
-      <div className="fixed bottom-20 right-4 sm:bottom-6 sm:right-6 z-40 flex items-center gap-3">
+      <div
+        className={cn(
+          "fixed z-40 flex items-center gap-3 transition-all duration-300",
+          isProductPage ? "bottom-[84px] right-3 sm:bottom-6 sm:right-6" : "bottom-4 right-4 sm:bottom-6 sm:right-6",
+        )}
+      >
         {/* Floating Bubble Button */}
         {open ? (
           <button
@@ -382,17 +389,17 @@ export function WhatsAppButton() {
             className="relative cursor-pointer transition-transform duration-300 hover:scale-110 active:scale-95 group"
           >
             <span className="absolute -inset-1 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 opacity-25 blur-md group-hover:opacity-50 transition" />
-            <div className="relative h-20 w-20 drop-shadow-[0_10px_22px_rgba(79,70,229,0.35)]">
+            <div className="relative h-14 w-14 sm:h-16 sm:w-16 drop-shadow-[0_8px_18px_rgba(79,70,229,0.3)]">
               <Image
                 src="/images/ai-avatar.png"
                 alt="Magora 3D AI Chatbot"
-                width={80}
-                height={80}
+                width={64}
+                height={64}
                 priority
                 className="h-full w-full object-contain filter drop-shadow-[0_4px_10px_rgba(0,0,0,0.18)]"
               />
             </div>
-            <span className="absolute bottom-1 right-1 h-3.5 w-3.5 rounded-full border-2 border-white bg-emerald-500 shadow-sm" />
+            <span className="absolute bottom-0.5 right-0.5 h-3 w-3 rounded-full border-2 border-white bg-emerald-500 shadow-sm" />
           </div>
         )}
       </div>

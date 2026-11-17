@@ -51,6 +51,7 @@ const webDest = path.join(stagingDir, "apps", "web");
   if (fs.existsSync(p)) copyRecursive(p, path.join(webDest, f));
 });
 copyRecursive(path.join(rootDir, "apps", "web", "public"), path.join(webDest, "public"));
+copyRecursive(path.join(rootDir, "apps", "web", "src"), path.join(webDest, "src"));
 
 // Copy compiled .next output (excluding cache, diagnostics, dev)
 const nextBuildDir = path.join(rootDir, "apps", "web", ".next");

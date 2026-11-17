@@ -7,6 +7,7 @@ import { PhoneFinder } from "@/components/PhoneFinder";
 import { ProductCard } from "@/components/ProductCard";
 import { OtherShops, SectionTitle } from "@/components/home/Blocks";
 import { ReelsStoriesSection } from "@/components/reels/ReelsStoriesSection";
+import { ShopByPhone } from "@/components/home/ShopByPhone";
 
 const HERO_SLUGS = [
   "crystal-clear-magsafe-case",
@@ -87,29 +88,8 @@ export default async function Home() {
       {/* ───── TikTok / Instagram Shoppable Reels ───── */}
       <ReelsStoriesSection />
 
-      {/* ───── shop by phone ───── */}
-      <section className="mt-16">
-        <SectionTitle eyebrow="Find your fit" title="Shop by phone" href="/shop?category=magsafe-cases" />
-        <div className="grid gap-4 md:grid-cols-3">
-          {(brands ?? []).map((b) => (
-            <div key={b.slug} className="card p-5">
-              <div className="flex items-center justify-between">
-                <h3 className="text-xl font-bold">{b.name}</h3>
-                <Link href={`/shop?category=magsafe-cases&brand=${b.slug}`} className="text-sm font-semibold text-accent">
-                  All {b.models?.length ?? 0} →
-                </Link>
-              </div>
-              <div className="mt-4 flex flex-wrap gap-2">
-                {(b.models ?? []).slice(0, 7).map((m) => (
-                  <Link key={m.slug} href={`/shop?category=magsafe-cases&model=${m.slug}`} className="chip" prefetch={false}>
-                    <Smartphone size={13} /> {shortModel(m.name)}
-                  </Link>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
+      {/* ───── shop by phone (Clean Interactive Tabbed Selector) ───── */}
+      <ShopByPhone brands={brands ?? []} category="magsafe-cases" />
 
       {/* ───── best sellers ───── */}
       <section className="mt-16">
