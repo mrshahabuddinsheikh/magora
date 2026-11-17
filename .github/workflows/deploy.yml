@@ -101,8 +101,6 @@ jobs:
             chmod -R 777 apps/api/uploads apps/api/backups
             
             echo "🔄 Gracefully restarting Phusion Passenger..."
-            pkill -f lsnode || true
-            pkill -f 'dist/server.js' || true
             touch tmp/restart.txt
             
             echo "✅ Deployment successful! Magora Store is LIVE."
