@@ -18,6 +18,7 @@ import { BoughtTogether, DeliveryEstimate, NotifyMe, ShareProduct, type Delivery
 import { useCart } from "@/stores/cart";
 import { usePrefs } from "@/stores/prefs";
 import { cn, money, pctOff } from "@/lib/format";
+import { detectUserDevice } from "@/lib/device-detect";
 import type { Product, ProductModel } from "@/lib/types";
 
 const SKIN_SIDES = 300; // keep in sync with store.skinSidesPrice in the API
@@ -57,7 +58,8 @@ export function ProductClient({ product: p, delivery }: { product: Product; deli
   const [added, setAdded] = useState(false);
   const [ready, setReady] = useState(false);
   const [showBar, setShowBar] = useState(false);
-  const [detectedModel, setDetectedModel] = useState<string | null>(null);
+  const [detectedPhone, setDetectedPhone] = useState<{ name: string; model: ProductModel } | null>(null);
+  const [savedPhonePref, setSavedPhonePref] = useState<{ name: string; slug: string } | null>(null);
   const [engravingEnabled, setEngravingEnabled] = useState(false);
   const [engravingText, setEngravingText] = useState("");
   const [engravingFont, setEngravingFont] = useState<"sans" | "serif" | "script">("sans");
@@ -72,57 +74,51 @@ export function ProductClient({ product: p, delivery }: { product: Product; deli
       const urlModelSlug = params.get("model");
       const savedPhone = usePrefs.getState().phone;
 
-      let detected: { name: string; model?: ProductModel } | null = null;
+      if (savedPhone?.name && savedPhone?.slug) {
+        setSavedPhonePref({ name: savedPhone.name, slug: savedPhone.slug });
+      }
 
-      if (typeof window !== "undefined") {
-        const ua = navigator.userAgent;
-        const isMobile = /iPhone|iPad|iPod|Android|Mobile/i.test(ua);
+      // Run advanced device detection (screen geometry + WebGL GPU + Client Hints)
+      const detected = detectUserDevice();
+      let matchedDetected: ProductModel | undefined;
 
-        if (urlModelSlug) {
-          const m = p.models.find((x) => x.slug === urlModelSlug);
-          if (m) detected = { name: m.name, model: m };
-        } else if (savedPhone?.slug) {
-          const m = p.models.find(
-            (x) => x.slug === savedPhone.slug || x.name.toLowerCase() === savedPhone.name.toLowerCase(),
-          );
-          if (m) detected = { name: m.name, model: m };
-        } else if (isMobile) {
-          if (/iPhone/i.test(ua)) {
-            const w = Math.min(window.screen.width, window.screen.height);
-            const h = Math.max(window.screen.width, window.screen.height);
-            let name = "iPhone 15 Pro Max";
-            if (w === 440 && h === 956) name = "iPhone 16 Pro Max";
-            else if (w === 402 && h === 874) name = "iPhone 16 Pro";
-            else if (w === 430 && h === 932) name = "iPhone 15 Pro Max";
-            else if (w === 393 && h === 852) name = "iPhone 15 Pro";
-            else if (w === 428 && h === 926) name = "iPhone 14 Pro Max";
-            else if (w === 390 && h === 844) name = "iPhone 13";
-            const m = p.models.find(
-              (x) =>
-                x.name.toLowerCase() === name.toLowerCase() ||
-                x.slug.includes(name.toLowerCase().replace(/\s+/g, "-")),
-            );
-            if (m) detected = { name: m.name, model: m };
-          } else if (/Android/i.test(ua)) {
-            let name = "Galaxy S24 Ultra";
-            if (/SM-S938/i.test(ua)) name = "Galaxy S25 Ultra";
-            else if (/SM-S928/i.test(ua)) name = "Galaxy S24 Ultra";
-            else if (/SM-S918/i.test(ua)) name = "Galaxy S23 Ultra";
-            else if (/Pixel 9/i.test(ua)) name = "Pixel 9 Pro";
-            const m = p.models.find((x) => x.name.toLowerCase() === name.toLowerCase());
-            if (m) detected = { name: m.name, model: m };
-          }
+      if (detected.isMobile && detected.modelName) {
+        matchedDetected = p.models.find(
+          (x) =>
+            x.name.toLowerCase() === detected.modelName!.toLowerCase() ||
+            x.slug.includes(detected.modelName!.toLowerCase().replace(/\s+/g, "-")),
+        );
+        if (matchedDetected) {
+          setDetectedPhone({ name: matchedDetected.name, model: matchedDetected });
         }
       }
 
-      if (detected?.model) {
-        setModel(detected.model);
-        setDetectedModel(detected.name);
-        setPhone({ slug: detected.model.slug, name: detected.model.name, brand: detected.model.brand.slug });
-      } else {
-        const fallback = initialModel(p, urlModelSlug, savedPhone?.slug);
-        setModel(fallback);
-        setDetectedModel(null);
+      // Determine model to select:
+      // 1. If savedPhone matches this product, prioritize it
+      // 2. Else if urlModelSlug matches this product, use it
+      // 3. Else if matchedDetected, use it on mobile
+      // 4. Fallback to initial default
+      let chosen: ProductModel | undefined;
+      if (savedPhone?.slug) {
+        chosen = p.models.find(
+          (x) => x.slug === savedPhone.slug || x.name.toLowerCase() === savedPhone.name.toLowerCase(),
+        );
+      }
+      if (!chosen && urlModelSlug) {
+        chosen = p.models.find((x) => x.slug === urlModelSlug);
+      }
+      if (!chosen && matchedDetected) {
+        chosen = matchedDetected;
+      }
+      if (!chosen) {
+        chosen = initialModel(p, urlModelSlug, savedPhone?.slug);
+      }
+
+      if (chosen) {
+        setModel(chosen);
+        if (matchedDetected && !savedPhone?.slug) {
+          setPhone({ slug: chosen.slug, name: chosen.name, brand: chosen.brand.slug });
+        }
       }
 
       const c = Number(params.get("color"));
@@ -383,12 +379,60 @@ export function ProductClient({ product: p, delivery }: { product: Product; deli
 
             {/* step 1 */}
             <div className="mt-5">
-              {detectedModel && (
-                <div className="mb-3 flex items-center gap-2 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 px-3.5 py-2 text-xs text-emerald-800 dark:text-emerald-300 font-medium">
-                  <Sparkles size={15} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
-                  <span>Detected your device: <b className="text-ink">{detectedModel}</b> — Showing precision compatible fit</span>
+              {/* Smart Device Detection & Preference Banner */}
+              {savedPhonePref ? (
+                <div className="mb-3 flex items-center justify-between rounded-2xl bg-black/[0.03] border border-line px-3.5 py-2 text-xs text-muted dark:bg-white/5">
+                  <div className="flex items-center gap-2">
+                    <Smartphone size={14} className="text-accent" />
+                    <span>
+                      Saved device: <b className="text-ink dark:text-white">{savedPhonePref.name}</b>
+                      {model.name === savedPhonePref.name && " — Showing compatible fit"}
+                    </span>
+                  </div>
+                  {model.name !== savedPhonePref.name && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const m = p.models.find(
+                          (x) => x.slug === savedPhonePref.slug || x.name.toLowerCase() === savedPhonePref.name.toLowerCase(),
+                        );
+                        if (m) choose(m);
+                      }}
+                      className="text-xs font-bold text-accent underline hover:opacity-80"
+                    >
+                      Switch to {savedPhonePref.name} &rarr;
+                    </button>
+                  )}
                 </div>
-              )}
+              ) : detectedPhone ? (
+                model.name === detectedPhone.name ? (
+                  <div className="mb-3 flex items-center justify-between rounded-2xl bg-emerald-500/10 border border-emerald-500/25 px-3.5 py-2 text-xs text-emerald-900 dark:text-emerald-200 font-medium">
+                    <div className="flex items-center gap-2">
+                      <Sparkles size={14} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+                      <span>
+                        Detected your device: <b className="text-ink dark:text-white font-bold">{detectedPhone.name}</b> — Showing precision compatible fit
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="mb-3 flex items-center justify-between rounded-2xl bg-amber-500/10 border border-amber-500/25 px-3.5 py-2 text-xs text-amber-900 dark:text-amber-200">
+                    <div className="flex items-center gap-1.5">
+                      <Smartphone size={14} className="text-amber-600 dark:text-amber-400 shrink-0" />
+                      <span>
+                        Viewing {model.name}. Your device detected as <b>{detectedPhone.name}</b>.
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => choose(detectedPhone.model)}
+                      className="font-bold text-accent underline hover:opacity-80 shrink-0 ml-2"
+                    >
+                      Switch to {detectedPhone.name} &rarr;
+                    </button>
+                  </div>
+                )
+              ) : null}
+
               <div className="mb-2 flex items-center justify-between">
                 <h2 className="flex items-center gap-2 text-[15px] font-bold">
                   <span className="grid h-6 w-6 place-items-center rounded-full bg-ink text-[12px] text-white">1</span> Choose your phone

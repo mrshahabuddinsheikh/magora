@@ -238,31 +238,56 @@ export function ModelPicker({ models, value, onChange }: { models: M[]; value?: 
                 // Search Results
                 <div>
                   <div className="text-xs font-semibold text-muted mb-2 px-1">
-                    {hits.length ? `Search Results (${hits.length})` : "No matching models found"}
+                    {hits.length ? `Search Results (${hits.length})` : "Catalog mein nahi mila?"}
                   </div>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                    {hits.map((m) => {
-                      const on = m.slug === value;
-                      return (
-                        <button
-                          key={m.id}
-                          type="button"
-                          onClick={() => pick(m)}
-                          className={cn(
-                            "relative flex flex-col items-center justify-center rounded-2xl border p-3 text-center text-xs font-semibold transition min-h-[58px]",
-                            on
-                              ? "border-ink bg-ink text-white dark:border-white dark:bg-white dark:text-neutral-950 font-bold shadow-sm"
-                              : "border-black/[0.08] dark:border-white/10 bg-white/70 dark:bg-white/[0.03] hover:border-black/25 text-ink",
-                            m.inStock === false && "opacity-45",
-                          )}
-                        >
-                          <span className="text-[10px] text-muted uppercase tracking-wider block">{m.brand.name}</span>
-                          <span className="line-clamp-1">{m.name}</span>
-                          {on && <Check size={14} className="absolute right-2 top-2" />}
-                        </button>
-                      );
-                    })}
-                  </div>
+                  {hits.length > 0 ? (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                      {hits.map((m) => {
+                        const on = m.slug === value;
+                        return (
+                          <button
+                            key={m.id}
+                            type="button"
+                            onClick={() => pick(m)}
+                            className={cn(
+                              "relative flex flex-col items-center justify-center rounded-2xl border p-3 text-center text-xs font-semibold transition min-h-[58px]",
+                              on
+                                ? "border-ink bg-ink text-white dark:border-white dark:bg-white dark:text-neutral-950 font-bold shadow-sm"
+                                : "border-black/[0.08] dark:border-white/10 bg-white/70 dark:bg-white/[0.03] hover:border-black/25 text-ink",
+                              m.inStock === false && "opacity-45",
+                            )}
+                          >
+                            <span className="text-[10px] text-muted uppercase tracking-wider block">{m.brand.name}</span>
+                            <span className="line-clamp-1">{m.name}</span>
+                            {on && <Check size={14} className="absolute right-2 top-2" />}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="rounded-2xl border border-dashed border-accent/40 bg-accent/5 p-4 text-center space-y-2.5">
+                      <p className="text-xs text-muted leading-relaxed">
+                        Aap ka model &ldquo;<b className="text-ink">{q.trim()}</b>&rdquo; hamare custom laser-cut catalog mein ban sakta hai!
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const customModel: M = {
+                            id: 999900 + Math.floor(Math.random() * 99),
+                            slug: q.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-"),
+                            name: q.trim(),
+                            brand: { slug: "custom", name: "Custom" },
+                            year: 2026,
+                            popular: false,
+                          };
+                          pick(customModel);
+                        }}
+                        className="btn btn-primary h-9 px-4 text-xs font-bold mx-auto"
+                      >
+                        Use &ldquo;{q.trim()}&rdquo; &rarr;
+                      </button>
+                    </div>
+                  )}
                 </div>
               ) : (
                 // Selected Brand's Model List
