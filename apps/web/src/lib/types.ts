@@ -229,6 +229,10 @@ export interface MarketingSettings {
   googleSearchConsoleCode: string | null;
   pinterestTagId?: string | null;
   snapchatPixelId?: string | null;
+  metaCapiToken?: string | null;
+  metaTestEventCode?: string | null;
+  tiktokAccessToken?: string | null;
+  tiktokTestEventCode?: string | null;
   trackPurchases: boolean;
   trackAddToCart: boolean;
   trackInitiateCheckout: boolean;

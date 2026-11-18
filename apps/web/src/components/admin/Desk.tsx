@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  Box, Check, ChevronRight, MessageCircle, PackageCheck, PackageX, Printer, RefreshCw, ScanLine, Search, Truck, Undo2, X,
+  Box, Check, ChevronRight, MessageCircle, PackageCheck, PackageX, Printer, RefreshCw, ScanLine, Search, Truck, Undo2, X, Zap,
 } from "lucide-react";
 import { api } from "@/lib/client-api";
 import { cn, dateTime, money } from "@/lib/format";
@@ -125,6 +125,22 @@ export function Desk({ openOrder }: { openOrder: (n: string) => void }) {
     window.open(`/admin/labels?numbers=${encodeURIComponent(numbers.join(","))}&view=${view}`, "_blank");
   };
 
+  const bulkBookCourier = async (courier: string) => {
+    if (!sel.size) return;
+    setBusy(true);
+    try {
+      await api("/admin/orders/bulk-book-courier", {
+        method: "POST",
+        json: { numbers: [...sel], courier },
+      });
+      await load();
+    } catch (e: any) {
+      alert(e.message || "Bulk courier booking failed");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const codTotal = chosen.reduce((a, r) => a + r.codDue, 0);
   const st = STAGES.find((s) => s.id === stage)!;
 
@@ -187,6 +203,8 @@ export function Desk({ openOrder }: { openOrder: (n: string) => void }) {
           <span className="flex-1" />
           <button disabled={busy} onClick={() => printLabels("labels")} className="btn btn-dark h-9 px-3 text-[13px]"><Printer size={15} /> Print labels</button>
           <button disabled={busy} onClick={() => printLabels("pick")} className="btn btn-ghost h-9 px-3 text-[13px]"><Box size={15} /> Pick list</button>
+          <button disabled={busy} onClick={() => bulkBookCourier("postex")} className="btn btn-secondary h-9 px-3 text-[13px] font-bold"><Zap size={14} className="text-amber-500 fill-amber-500" /> Book PostEx</button>
+          <button disabled={busy} onClick={() => bulkBookCourier("trax")} className="btn btn-secondary h-9 px-3 text-[13px] font-bold"><Zap size={14} className="text-amber-500 fill-amber-500" /> Book Trax</button>
           {["new", "to_pack"].includes(stage) && (
             <button disabled={busy} onClick={() => bulk("pack")} className="btn btn-ghost h-9 px-3 text-[13px]"><PackageCheck size={15} /> Mark packed</button>
           )}

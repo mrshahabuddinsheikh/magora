@@ -12,6 +12,7 @@ import { isBlocked } from "./engage";
 import { getProvider, providers } from "../payments";
 import { invalidate } from "../lib/cache";
 import { loadShipment, presentShipment } from "./tracking";
+import { trackServerPurchaseEvent } from "./marketing";
 
 export const RETURN_LABEL: Record<string, string> = {
   requested: "Return requested",
@@ -250,6 +251,19 @@ export async function orderRoutes(app: FastifyInstance) {
         customerEmail: result.customerEmail,
       });
       const full = await loadOrder(eq(s.orders.id, result.id));
+      if (full) {
+        trackServerPurchaseEvent({
+          number: full.order.number,
+          total: full.order.total,
+          name: full.order.customerName,
+          phone: full.order.customerPhone,
+          city: full.order.city,
+          items: full.items.map((i) => ({ name: i.productName, qty: i.qty, price: i.unitPrice })),
+          clientIp: req.ip,
+          userAgent: req.headers["user-agent"],
+          eventId: `ORD-${full.order.number}`,
+        }).catch(() => {});
+      }
       reply.code(201);
       return { data: { order: presentOrder(full!, true), payment } };
     },
@@ -314,7 +328,7 @@ export async function orderRoutes(app: FastifyInstance) {
         .innerJoin(s.productColors, eq(s.variants.colorId, s.productColors.id))
         .where(and(eq(s.variants.id, b.variantId), eq(s.variants.active, true)));
 
-      if (!v) throw notFound("Selected product variant is not available", "variant_not_found");
+      if (!v) throw notFound("Selected product variant is not available");
       if (v.variant.stock < qty) {
         throw new ApiError(409, "stock_changed", `${v.product.name} only has ${v.variant.stock} left in stock`);
       }
@@ -405,6 +419,19 @@ export async function orderRoutes(app: FastifyInstance) {
 
       invalidate("catalog:product");
       const full = await loadOrder(eq(s.orders.id, result.id));
+      if (full) {
+        trackServerPurchaseEvent({
+          number: full.order.number,
+          total: full.order.total,
+          name: full.order.customerName,
+          phone: full.order.customerPhone,
+          city: full.order.city,
+          items: full.items.map((i) => ({ name: i.productName, qty: i.qty, price: i.unitPrice })),
+          clientIp: req.ip,
+          userAgent: req.headers["user-agent"],
+          eventId: `ORD-${full.order.number}`,
+        }).catch(() => {});
+      }
       reply.code(201);
       return { data: { order: presentOrder(full!, true) } };
     },

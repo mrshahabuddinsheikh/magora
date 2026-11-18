@@ -9,6 +9,7 @@ import { requireAdmin } from "../lib/auth";
 import { badRequest } from "../lib/errors";
 import { normalizePkPhone } from "./orders";
 import { invalidate } from "../lib/cache";
+import { trackServerPurchaseEvent } from "./marketing";
 
 const META_VERIFY_TOKEN = process.env.META_WEBHOOK_VERIFY_TOKEN || "magora_meta_lead_token_2026";
 const TIKTOK_VERIFY_TOKEN = process.env.TIKTOK_WEBHOOK_VERIFY_TOKEN || "magora_tiktok_lead_token_2026";
@@ -252,6 +253,14 @@ export async function createSocialAdOrder(input: SocialLeadInput) {
   });
 
   invalidate("catalog:product");
+  trackServerPurchaseEvent({
+    number: result.orderNumber,
+    total: result.total,
+    name: result.name,
+    phone: result.phone,
+    items: [{ name: product.name, qty: 1, price: unitPrice }],
+    eventId: `LEAD-${result.orderNumber}`,
+  }).catch(() => {});
   return result;
 }
 
