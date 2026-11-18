@@ -44,7 +44,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             __html: `
               try {
                 const t = localStorage.getItem('mg_theme');
-                if (t === 'dark' || (!t && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                if (t === 'dark') {
                   document.documentElement.classList.add('dark');
                   document.documentElement.setAttribute('data-theme', 'dark');
                 } else {
@@ -73,7 +73,6 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           <RecentPurchase />
           <PwaInstallPrompt />
           <PushNotificationPrompt />
-          <LeadCaptureModal />
         </Suspense>
         <Analytics />
       </body>

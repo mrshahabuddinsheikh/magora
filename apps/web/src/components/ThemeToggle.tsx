@@ -10,9 +10,7 @@ export function ThemeToggle({ className }: { className?: string }) {
   useEffect(() => {
     queueMicrotask(() => {
       setMounted(true);
-      const isDark = document.documentElement.classList.contains("dark") ||
-        localStorage.getItem("mg_theme") === "dark" ||
-        (!localStorage.getItem("mg_theme") && window.matchMedia("(prefers-color-scheme: dark)").matches);
+      const isDark = localStorage.getItem("mg_theme") === "dark";
       setDark(isDark);
       if (isDark) {
         document.documentElement.classList.add("dark");

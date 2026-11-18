@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Bell, Check, Link2, MapPin, Plus, Share2, ShoppingBag, Truck } from "lucide-react";
 import { api } from "@/lib/client-api";
 import { ProductThumb } from "./CaseThumb";
@@ -218,6 +218,7 @@ export function BoughtTogether({
 }) {
   const add = useCart((s) => s.add);
   const busy = useCart((s) => s.busy);
+  const cartItems = useCart((s) => s.cart?.items ?? []);
   const [picks, setPicks] = useState<Pick[]>([]);
   const [off, setOff] = useState<Set<number>>(new Set());
   const [done, setDone] = useState(false);
@@ -256,6 +257,13 @@ export function BoughtTogether({
   const chosen = picks.filter((x) => !off.has(x.variantId));
   const sum = current.price + chosen.reduce((a, x) => a + x.price, 0);
   const save = chosen.length ? Math.round((sum * BUNDLE_PCT) / 100) : 0;
+
+  const isBundleInCart = useMemo(() => {
+    if (!chosen.length) return false;
+    const currentIn = current.variantId ? cartItems.some((i) => i.variantId === current.variantId) : true;
+    const allExtrasIn = chosen.every((x) => cartItems.some((i) => i.variantId === x.variantId));
+    return currentIn && allExtrasIn;
+  }, [chosen, cartItems, current.variantId]);
 
   const addAll = async () => {
     if (current.needsPhoto || !current.variantId) {
@@ -309,9 +317,19 @@ export function BoughtTogether({
             {save > 0 && <span className="text-[13px] text-muted line-through tabular-nums">{money(sum)}</span>}
           </div>
         </div>
-        <button className="btn btn-primary h-11" disabled={busy || !chosen.length} onClick={addAll}>
-          {done ? <Check size={17} /> : <ShoppingBag size={17} />} {done ? "Added to bag" : `Add ${chosen.length + (current.needsPhoto ? 0 : 1)} to bag`}
-        </button>
+        {isBundleInCart || done ? (
+          <button
+            type="button"
+            className="btn btn-primary h-11 bg-emerald-600 hover:bg-emerald-700 text-white gap-2 font-bold shadow-sm"
+            onClick={() => useCart.getState().setOpen(true)}
+          >
+            <Check size={17} /> Added to bag · View Bag
+          </button>
+        ) : (
+          <button className="btn btn-primary h-11" disabled={busy || !chosen.length} onClick={addAll}>
+            <ShoppingBag size={17} /> Add {chosen.length + (current.needsPhoto ? 0 : 1)} to bag
+          </button>
+        )}
       </div>
       {current.needsPhoto && <p className="mt-2 text-[12px] text-muted">Your photo skin is added separately after you upload your photo.</p>}
     </section>

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Banknote, Check, ChevronDown, Magnet, Minus, Plus, RotateCcw, ShoppingBag, Truck, Zap, Hand, Smartphone } from "lucide-react";
+import { Banknote, Check, ChevronDown, Magnet, Minus, Plus, RotateCcw, ShoppingBag, Truck, Zap, Hand, Smartphone, X } from "lucide-react";
 import { LazyViewer } from "./viewer/LazyViewer";
 import { Lightbox } from "./Lightbox";
 import { designFor, viewOf } from "@/lib/view";
@@ -37,6 +37,7 @@ export function ProductClient({ product: p, delivery }: { product: Product; deli
   const add = useCart((s) => s.add);
   const busy = useCart((s) => s.busy);
   const cartError = useCart((s) => s.error);
+  const cartItems = useCart((s) => s.cart?.items ?? []);
   const router = useRouter();
 
   const [model, setModel] = useState<ProductModel>(() => p.models.find((m) => m.popular) ?? p.models[0]);
@@ -56,6 +57,7 @@ export function ProductClient({ product: p, delivery }: { product: Product; deli
   const [slide, setSlide] = useState(() => (photos.length && (photosOnly || viewOf(p.view).first === "photos") ? 0 : -1));
   const [zoomAt, setZoomAt] = useState<number | null>(null);
   const [added, setAdded] = useState(false);
+  const [barDismissed, setBarDismissed] = useState(false);
   const [ready, setReady] = useState(false);
   const [showBar, setShowBar] = useState(false);
   const [detectedPhone, setDetectedPhone] = useState<{ name: string; model: ProductModel } | null>(null);
@@ -157,6 +159,8 @@ export function ProductClient({ product: p, delivery }: { product: Product; deli
   const off = pctOff(price, compare);
   const stock = variant?.stock ?? 0;
   const soldOut = !variant || stock <= 0;
+  const inCart = useMemo(() => cartItems.some((i) => i.variantId === variant?.id), [cartItems, variant?.id]);
+  const inCartQty = useMemo(() => cartItems.find((i) => i.variantId === variant?.id)?.qty ?? 0, [cartItems, variant?.id]);
 
   const choose = (m: ProductModel) => {
     setModel(m);
@@ -590,9 +594,19 @@ export function ProductClient({ product: p, delivery }: { product: Product; deli
                   <Plus size={16} />
                 </button>
               </div>
-              <button className="btn btn-dark h-[52px] flex-1 text-[15.5px]" disabled={soldOut || busy} onClick={() => addToBag(false)}>
-                {added ? <Check size={18} /> : <ShoppingBag size={18} />} {uploading ? "Uploading photo…" : added ? "Added" : "Add to bag"}
-              </button>
+              {inCart ? (
+                <button
+                  type="button"
+                  className="btn btn-dark h-[52px] flex-1 text-[15.5px] font-bold gap-2 border-emerald-500/40"
+                  onClick={() => useCart.getState().setOpen(true)}
+                >
+                  <Check size={18} className="text-emerald-400" /> In Bag ({inCartQty}) · View Bag
+                </button>
+              ) : (
+                <button className="btn btn-dark h-[52px] flex-1 text-[15.5px]" disabled={soldOut || busy} onClick={() => addToBag(false)}>
+                  {added ? <Check size={18} /> : <ShoppingBag size={18} />} {uploading ? "Uploading photo…" : added ? "Added" : "Add to bag"}
+                </button>
+              )}
             </div>
             <button className="btn btn-primary mt-2.5 h-[52px] w-full text-[15.5px]" disabled={soldOut || busy} onClick={() => addToBag(true)}>
               <Zap size={18} /> Buy now · Cash on Delivery
@@ -749,16 +763,44 @@ export function ProductClient({ product: p, delivery }: { product: Product; deli
       </div>
 
       {/* mobile sticky buy bar */}
-      <div className={cn("fixed inset-x-2 bottom-2 z-40 transition-all duration-300 lg:hidden", showBar ? "translate-y-0 opacity-100" : "pointer-events-none translate-y-24 opacity-0")}>
-        <div className="glass-strong flex items-center gap-3 rounded-[24px] p-2 pl-4">
-          <div className="min-w-0 flex-1 leading-tight">
-            <div className="truncate text-[12px] text-muted">{model.name} · {color.name}</div>
-            <div className="font-bold tabular-nums">{money(price)}</div>
+      <div className={cn("fixed inset-x-2 bottom-2 z-40 transition-all duration-300 lg:hidden", showBar && !barDismissed ? "translate-y-0 opacity-100" : "pointer-events-none translate-y-24 opacity-0")}>
+        {inCart ? (
+          <div className="glass-strong flex items-center justify-between gap-3 rounded-[24px] p-2 pl-4 border border-emerald-500/30">
+            <div className="min-w-0 flex-1 leading-tight">
+              <div className="truncate text-[12px] text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
+                <Check size={13} className="shrink-0" /> In your bag ({inCartQty})
+              </div>
+              <div className="text-[13.5px] font-bold tracking-tight text-foreground truncate">{model.name} · {color.name}</div>
+            </div>
+            <div className="flex items-center gap-1.5 shrink-0">
+              <button
+                type="button"
+                className="btn btn-primary h-10 px-3.5 text-[13px] font-bold bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5 shadow-sm"
+                onClick={() => useCart.getState().setOpen(true)}
+              >
+                <ShoppingBag size={14} /> View Bag
+              </button>
+              <button
+                type="button"
+                aria-label="Dismiss bar"
+                className="grid h-8 w-8 place-items-center rounded-full text-muted hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5"
+                onClick={() => setBarDismissed(true)}
+              >
+                <X size={15} />
+              </button>
+            </div>
           </div>
-          <button className="btn btn-primary h-12" disabled={soldOut || busy} onClick={() => addToBag(false)}>
-            {added ? <Check size={17} /> : <ShoppingBag size={17} />} {added ? "Added" : "Add to bag"}
-          </button>
-        </div>
+        ) : (
+          <div className="glass-strong flex items-center gap-3 rounded-[24px] p-2 pl-4">
+            <div className="min-w-0 flex-1 leading-tight">
+              <div className="truncate text-[12px] text-muted">{model.name} · {color.name}</div>
+              <div className="font-bold tabular-nums">{money(price)}</div>
+            </div>
+            <button className="btn btn-primary h-12" disabled={soldOut || busy} onClick={() => addToBag(false)}>
+              {added ? <Check size={17} /> : <ShoppingBag size={17} />} {added ? "Added" : "Add to bag"}
+            </button>
+          </div>
+        )}
       </div>
     </>
   );
