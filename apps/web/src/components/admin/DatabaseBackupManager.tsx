@@ -217,7 +217,7 @@ export function DatabaseBackupManager() {
               <h2 className="text-xl font-black text-ink tracking-tight flex items-center gap-2">
                 <span>Database Backup & Restore</span>
                 <span className="rounded-full bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 text-[10.5px] font-bold text-emerald-500">
-                  SQLite 3 WAL Active
+                  MySQL 8 / InnoDB Active
                 </span>
               </h2>
               <p className="text-xs text-muted">
@@ -346,14 +346,14 @@ export function DatabaseBackupManager() {
           </div>
 
           <div className="space-y-3">
-            {/* Primary SQLite .db Download */}
+            {/* Primary MySQL .sql Download */}
             <button
               onClick={handleDownloadDb}
               disabled={downloadingDb}
               className="btn btn-primary w-full text-xs font-bold h-12 shadow-md inline-flex items-center justify-center gap-2"
             >
               <ArrowDownToLine size={18} className={downloadingDb ? "animate-bounce" : ""} />
-              <span>{downloadingDb ? "Generating Safe Snapshot..." : "Download Full Database (.db)"}</span>
+              <span>{downloadingDb ? "Generating MySQL SQL Dump..." : "Download Full MySQL Dump (.sql)"}</span>
             </button>
 
             {/* Secondary JSON Export Download */}
@@ -371,7 +371,7 @@ export function DatabaseBackupManager() {
               disabled={creatingSnapshot}
               className="w-full text-center text-[11px] font-semibold text-accent hover:underline py-1"
             >
-              {creatingSnapshot ? "Saving snapshot on server..." : "+ Save Instant Snapshot to Server Backups"}
+              {creatingSnapshot ? "Saving snapshot on server..." : "+ Save Instant MySQL Snapshot to Server Backups"}
             </button>
           </div>
         </div>
@@ -385,7 +385,7 @@ export function DatabaseBackupManager() {
             </div>
             <h3 className="text-lg font-black text-ink">Restore Database from Backup</h3>
             <p className="text-xs text-muted leading-relaxed">
-              Apna pehle se download kiya hua SQLite (.db) backup ya JSON export yahan upload karke data wapas restore karein.
+              Apna pehle se download kiya hua MySQL (.sql) dump ya JSON export yahan upload karke data wapas restore karein.
             </p>
           </div>
 
@@ -403,15 +403,15 @@ export function DatabaseBackupManager() {
                   </p>
                 ) : (
                   <>
-                    <p className="font-bold text-ink">Click to select .db or .json backup file</p>
-                    <p className="text-[11px] text-muted">Supports SQLite 3 binary (.db) or JSON export</p>
+                    <p className="font-bold text-ink">Click to select .sql or .json backup file</p>
+                    <p className="text-[11px] text-muted">Supports MySQL SQL Dump (.sql) or JSON export</p>
                   </>
                 )}
               </div>
               <input
                 ref={fileInputRef}
                 type="file"
-                accept=".db,.sqlite,.sqlite3,.json"
+                accept=".sql,.json,.db"
                 onChange={handleFileChange}
                 className="hidden"
               />

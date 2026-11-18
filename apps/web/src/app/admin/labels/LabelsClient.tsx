@@ -35,82 +35,282 @@ function Barcode({ value, height = 44, className }: { value: string; height?: nu
   );
 }
 
-/** One parcel label, A6 / 4×6 inch. What's inside is NOT printed (only "Mobile accessories"). */
-function ParcelLabel({ l, from, contents }: { l: Label; from: Data["from"]; contents: string }) {
+/** Pixel-perfect 300 DPI Shipping Label Image Generator (4x6 / A6 thermal print ready) */
+function downloadLabelImage(l: Label, from: Data["from"], contents: string) {
+  const canvas = document.createElement("canvas");
+  canvas.width = 1200;
+  canvas.height = 1800;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return;
+
+  // Background
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, 1200, 1800);
+
+  // Outer border
+  ctx.strokeStyle = "#000000";
+  ctx.lineWidth = 6;
+  ctx.strokeRect(30, 30, 1140, 1740);
+
+  // Header: Brand & Date
+  ctx.fillStyle = "#000000";
+  ctx.font = "bold 44px Arial, sans-serif";
+  ctx.fillText(from.name.toUpperCase(), 60, 110);
+
+  ctx.font = "26px Arial, sans-serif";
+  ctx.fillStyle = "#666666";
+  const dateStr = new Date(l.date).toLocaleDateString("en-PK", { day: "2-digit", month: "short", year: "numeric" });
+  ctx.fillText(dateStr, 60, 155);
+
+  // Courier right header
+  ctx.textAlign = "right";
+  ctx.fillStyle = "#666666";
+  ctx.font = "24px Arial, sans-serif";
+  ctx.fillText("COURIER", 1140, 105);
+  ctx.fillStyle = "#000000";
+  ctx.font = "bold 40px Arial, sans-serif";
+  ctx.fillText(l.courier || "TRAX / TCS / LEOPARDS", 1140, 155);
+  ctx.textAlign = "left";
+
+  // Divider
+  ctx.lineWidth = 4;
+  ctx.beginPath();
+  ctx.moveTo(30, 185);
+  ctx.lineTo(1170, 185);
+  ctx.stroke();
+
+  // Barcode (Tracking or Order)
+  const trackNum = l.trackingNumber || l.number;
+  const { bars, width: bcWidth } = code128(trackNum);
+  const bcBoxX = 80;
+  const bcBoxY = 220;
+  const bcTargetW = 1040;
+  const bcH = 140;
+  const scale = bcTargetW / bcWidth;
+
+  ctx.fillStyle = "#000000";
+  for (const [bx, bw] of bars) {
+    ctx.fillRect(bcBoxX + bx * scale, bcBoxY, Math.max(1, bw * scale), bcH);
+  }
+
+  // Barcode text
+  ctx.font = "bold 34px 'Courier New', monospace";
+  ctx.textAlign = "center";
+  ctx.fillText(trackNum, 600, 405);
+  ctx.textAlign = "left";
+
+  // DELIVER TO Section Box
+  ctx.lineWidth = 4;
+  ctx.strokeRect(60, 440, 1080, 510);
+
+  // DELIVER TO Tag
+  ctx.fillStyle = "#000000";
+  ctx.fillRect(80, 465, 200, 42);
+  ctx.fillStyle = "#ffffff";
+  ctx.font = "bold 22px Arial, sans-serif";
+  ctx.fillText("DELIVER TO", 110, 495);
+
+  // Recipient details
+  ctx.fillStyle = "#000000";
+  ctx.font = "bold 46px Arial, sans-serif";
+  ctx.fillText(l.name, 85, 565);
+
+  ctx.font = "bold 38px Arial, sans-serif";
+  ctx.fillText("☎ " + localPhone(l.phone), 85, 625);
+
+  ctx.font = "30px Arial, sans-serif";
+  const addr = l.address + (l.postalCode ? ` · ${l.postalCode}` : "");
+  const words = addr.split(" ");
+  let line = "";
+  let curY = 680;
+  for (const w of words) {
+    const testLine = line + w + " ";
+    if (ctx.measureText(testLine).width > 980) {
+      ctx.fillText(line, 85, curY);
+      line = w + " ";
+      curY += 44;
+    } else {
+      line = testLine;
+    }
+  }
+  ctx.fillText(line, 85, curY);
+
+  // Destination City
+  ctx.font = "bold 64px Arial, sans-serif";
+  ctx.fillText(l.city.toUpperCase(), 85, 910);
+
+  // COD & Open Parcel Boxes
+  const cod = l.codDue > 0;
+  if (cod) {
+    ctx.fillStyle = "#000000";
+    ctx.fillRect(60, 980, 520, 230);
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "bold 22px Arial, sans-serif";
+    ctx.fillText("COLLECT CASH (COD)", 85, 1030);
+    ctx.font = "bold 60px Arial, sans-serif";
+    ctx.fillText(money(l.codDue), 85, 1120);
+  } else {
+    ctx.lineWidth = 4;
+    ctx.strokeRect(60, 980, 520, 230);
+    ctx.fillStyle = "#000000";
+    ctx.font = "bold 22px Arial, sans-serif";
+    ctx.fillText("PAYMENT STATUS", 85, 1030);
+    ctx.font = "bold 52px Arial, sans-serif";
+    ctx.fillText("PREPAID", 85, 1105);
+    ctx.font = "22px Arial, sans-serif";
+    ctx.fillText("Do not collect cash", 85, 1150);
+  }
+
+  // Open Parcel Box
+  ctx.lineWidth = 4;
+  ctx.strokeRect(620, 980, 520, 230);
+  ctx.fillStyle = "#000000";
+  ctx.font = "bold 22px Arial, sans-serif";
+  ctx.fillText("OPEN PARCEL POLICY", 645, 1030);
+  ctx.font = "bold 42px Arial, sans-serif";
+  ctx.fillText(l.openParcel ? "✔ ALLOWED" : "✘ NOT ALLOWED", 645, 1095);
+  ctx.font = "22px Arial, sans-serif";
+  ctx.fillStyle = "#555555";
+  ctx.fillText(l.openParcel ? "Customer may inspect before paying" : "Payment first, then open", 645, 1150);
+
+  // Order Details
+  ctx.fillStyle = "#000000";
+  ctx.font = "bold 26px Arial, sans-serif";
+  ctx.fillText(`ORDER: #${l.number}`, 60, 1260);
+  ctx.fillText(`PIECES: ${l.pieces}`, 450, 1260);
+  ctx.fillText(`WEIGHT: ${(l.weightGrams / 1000).toFixed(2)} kg`, 750, 1260);
+  ctx.fillText(`CONTENTS: ${contents}`, 60, 1310);
+
+  // Items summary
+  ctx.font = "24px Arial, sans-serif";
+  ctx.fillStyle = "#333333";
+  let itemsY = 1360;
+  for (const it of l.items.slice(0, 3)) {
+    ctx.fillText(`• ${it.qty}x ${it.name} (${it.model || ""}) - ${it.color}`, 60, itemsY);
+    itemsY += 35;
+  }
+
+  // Note if any
+  if (l.notes) {
+    ctx.fillStyle = "#b45309";
+    ctx.font = "bold 24px Arial, sans-serif";
+    ctx.fillText(`NOTE: ${l.notes}`, 60, 1500);
+  }
+
+  // Return to footer
+  ctx.fillStyle = "#000000";
+  ctx.fillRect(60, 1560, 280, 42);
+  ctx.fillStyle = "#ffffff";
+  ctx.font = "bold 22px Arial, sans-serif";
+  ctx.fillText("FROM / RETURN TO", 75, 1590);
+
+  ctx.fillStyle = "#000000";
+  ctx.font = "bold 32px Arial, sans-serif";
+  ctx.fillText(from.name, 60, 1645);
+  ctx.font = "26px Arial, sans-serif";
+  ctx.fillText(`${from.address} · Support: ${from.phone}`, 60, 1690);
+
+  // Trigger download
+  canvas.toBlob((blob) => {
+    if (!blob) return;
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `Magora-Label-#${l.number}.png`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+  }, "image/png");
+}
+
+/** One parcel label, A6 / 4×6 inch */
+function ParcelLabel({ l, from, contents, onDownload }: { l: Label; from: Data["from"]; contents: string; onDownload: () => void }) {
   const cod = l.codDue > 0;
   return (
-    <article className="label">
-      <div className="row head">
-        <div>
-          <b className="brand">{from.name}</b>
-          <span className="muted">{new Date(l.date).toLocaleDateString("en-PK", { day: "2-digit", month: "short", year: "numeric" })}</span>
+    <div className="relative group">
+      <article className="label">
+        <div className="row head">
+          <div>
+            <b className="brand">{from.name}</b>
+            <span className="muted">{new Date(l.date).toLocaleDateString("en-PK", { day: "2-digit", month: "short", year: "numeric" })}</span>
+          </div>
+          <div className="right">
+            <span className="muted">Courier</span>
+            <b className="courier">{l.courier ?? "—"}</b>
+          </div>
         </div>
-        <div className="right">
-          <span className="muted">Courier</span>
-          <b className="courier">{l.courier ?? "—"}</b>
-        </div>
-      </div>
 
-      {l.trackingNumber ? (
-        <div className="track">
-          <Barcode value={l.trackingNumber} height={40} className="bc" />
-          <span className="mono">{l.trackingNumber}</span>
-        </div>
-      ) : (
-        <div className="track empty">Courier tracking no. / CN: ____________________</div>
-      )}
+        {l.trackingNumber ? (
+          <div className="track">
+            <Barcode value={l.trackingNumber} height={40} className="bc" />
+            <span className="mono">{l.trackingNumber}</span>
+          </div>
+        ) : (
+          <div className="track empty">Courier tracking no. / CN: ____________________</div>
+        )}
 
-      <div className="to">
-        <span className="tag">DELIVER TO</span>
-        <p className="name">{l.name}</p>
-        <p className="phone">☎ {localPhone(l.phone)}</p>
-        <p className="addr">{l.address}{l.postalCode ? ` · ${l.postalCode}` : ""}</p>
-        <p className="city">{l.city.toUpperCase()}</p>
-      </div>
-
-      <div className="row boxes">
-        <div className={cod ? "box cod" : "box paid"}>
-          {cod ? (
-            <>
-              <span>COLLECT CASH (COD)</span>
-              <b>{money(l.codDue)}</b>
-            </>
-          ) : (
-            <>
-              <span>PREPAID</span>
-              <b className="small">Do not collect cash</b>
-            </>
-          )}
+        <div className="to">
+          <span className="tag">DELIVER TO</span>
+          <p className="name">{l.name}</p>
+          <p className="phone">☎ {localPhone(l.phone)}</p>
+          <p className="addr">{l.address}{l.postalCode ? ` · ${l.postalCode}` : ""}</p>
+          <p className="city">{l.city.toUpperCase()}</p>
         </div>
-        <div className={l.openParcel ? "box open" : "box closed"}>
-          <span>OPEN PARCEL</span>
-          <b className="small">{l.openParcel ? "✔ ALLOWED" : "✘ NOT ALLOWED"}</b>
-          <em>{l.openParcel ? "Customer may check before paying" : "Payment first, then open"}</em>
-        </div>
-      </div>
 
-      <div className="row order">
-        <div className="ordbc">
-          <Barcode value={l.number} height={30} className="bc" />
-          <span className="mono">Order #{l.number}</span>
+        <div className="row boxes">
+          <div className={cod ? "box cod" : "box paid"}>
+            {cod ? (
+              <>
+                <span>COLLECT CASH (COD)</span>
+                <b>{money(l.codDue)}</b>
+              </>
+            ) : (
+              <>
+                <span>PREPAID</span>
+                <b className="small">Do not collect cash</b>
+              </>
+            )}
+          </div>
+          <div className={l.openParcel ? "box open" : "box closed"}>
+            <span>OPEN PARCEL</span>
+            <b className="small">{l.openParcel ? "✔ ALLOWED" : "✘ NOT ALLOWED"}</b>
+            <em>{l.openParcel ? "Customer may check before paying" : "Payment first, then open"}</em>
+          </div>
         </div>
-        <div className="meta">
-          <span>Pieces <b>{l.pieces}</b></span>
-          <span>Weight <b>{(l.weightGrams / 1000).toFixed(2)} kg</b></span>
-          <span>Contents <b>{contents}</b></span>
+
+        <div className="row order">
+          <div className="ordbc">
+            <Barcode value={l.number} height={30} className="bc" />
+            <span className="mono">Order #{l.number}</span>
+          </div>
+          <div className="meta">
+            <span>Pieces <b>{l.pieces}</b></span>
+            <span>Weight <b>{(l.weightGrams / 1000).toFixed(2)} kg</b></span>
+            <span>Contents <b>{contents}</b></span>
+          </div>
         </div>
-      </div>
 
-      {l.notes && <p className="note">Note: {l.notes}</p>}
+        {l.notes && <p className="note">Note: {l.notes}</p>}
 
-      <div className="from">
-        <span className="tag">FROM / RETURN TO</span> {from.name} · {from.address} · {from.phone}
-      </div>
-    </article>
+        <div className="from">
+          <span className="tag">FROM / RETURN TO</span> {from.name} · {from.address} · {from.phone}
+        </div>
+      </article>
+
+      <button
+        type="button"
+        onClick={onDownload}
+        className="no-print absolute top-3 right-3 rounded-lg bg-black/85 hover:bg-black text-white text-[11px] font-bold px-2.5 py-1.5 flex items-center gap-1.5 shadow-lg opacity-80 group-hover:opacity-100 transition cursor-pointer"
+        title="Download this label as PNG image"
+      >
+        <span>💾 Download Image</span>
+      </button>
+    </div>
   );
 }
 
-/** Packing / pick list: what to take from the shelf (inside use only) */
+/** Packing / pick list */
 function PickList({ labels }: { labels: Label[] }) {
   const totals = new Map<string, { name: string; model: string; color: string; sku: string; qty: number }>();
   for (const l of labels)
@@ -183,6 +383,13 @@ export function LabelsClient() {
     }
   };
 
+  const handleDownloadAll = () => {
+    if (!data) return;
+    data.labels.forEach((l, idx) => {
+      setTimeout(() => downloadLabelImage(l, data.from, data.contents), idx * 350);
+    });
+  };
+
   if (!numbers) return <p className="p-10 text-center">No orders chosen. Go to the order desk and tick the orders first.</p>;
   if (err) return <p className="p-10 text-center text-danger">{err} (log in to the admin panel first)</p>;
   if (!data) return <p className="p-10 text-center text-muted">Loading labels…</p>;
@@ -190,34 +397,53 @@ export function LabelsClient() {
   return <PrintRoot>{page(data)}</PrintRoot>;
 
   function page(data: Data) {
-  return (
-    <div className={`labels-page size-${size}`}>
-      <style>{CSS(size)}</style>
-      <div className="no-print toolbar">
-        <Link href="/admin#desk" className="btn btn-glass h-10 px-4 text-sm">← Order desk</Link>
-        <div className="seg">
-          <button className={view === "labels" ? "on" : ""} onClick={() => setView("labels")}>Parcel labels ({data.labels.length})</button>
-          <button className={view === "pick" ? "on" : ""} onClick={() => setView("pick")}>Pick list</button>
-        </div>
-        {view === "labels" && (
+    return (
+      <div className={`labels-page size-${size}`}>
+        <style>{CSS(size)}</style>
+        <div className="no-print toolbar">
+          <Link href="/admin#desk" className="btn btn-glass h-10 px-4 text-sm">← Order desk</Link>
           <div className="seg">
-            <button className={size === "a4" ? "on" : ""} onClick={() => setSize("a4")}>A4 paper · 4 per page</button>
-            <button className={size === "a6" ? "on" : ""} onClick={() => setSize("a6")}>Label printer 4×6&quot;</button>
+            <button className={view === "labels" ? "on" : ""} onClick={() => setView("labels")}>Parcel labels ({data.labels.length})</button>
+            <button className={view === "pick" ? "on" : ""} onClick={() => setView("pick")}>Pick list</button>
           </div>
+          {view === "labels" && (
+            <div className="seg">
+              <button className={size === "a4" ? "on" : ""} onClick={() => setSize("a4")}>A4 paper · 4 per page</button>
+              <button className={size === "a6" ? "on" : ""} onClick={() => setSize("a6")}>Label printer 4×6&quot;</button>
+            </div>
+          )}
+          {view === "labels" && (
+            <button 
+              type="button" 
+              className="btn btn-secondary h-10 px-4 text-sm inline-flex items-center gap-1.5"
+              onClick={handleDownloadAll}
+              title="Download all labels as PNG image files for printing later"
+            >
+              <span>🖼 Download All Images</span>
+            </button>
+          )}
+          <button className="btn btn-primary h-10 px-5 text-sm" onClick={print}>🖨 Print</button>
+        </div>
+        {view === "labels" ? (
+          <div className="sheet">
+            {data.labels.map((l) => (
+              <ParcelLabel
+                key={l.number}
+                l={l}
+                from={data.from}
+                contents={data.contents}
+                onDownload={() => downloadLabelImage(l, data.from, data.contents)}
+              />
+            ))}
+          </div>
+        ) : (
+          <PickList labels={data.labels} />
         )}
-        <button className="btn btn-primary h-10 px-5 text-sm" onClick={print}>🖨 Print</button>
       </div>
-      {view === "labels" ? (
-        <div className="sheet">{data.labels.map((l) => <ParcelLabel key={l.number} l={l} from={data.from} contents={data.contents} />)}</div>
-      ) : (
-        <PickList labels={data.labels} />
-      )}
-    </div>
-  );
+    );
   }
 }
 
-/** Labels live in their own top-level box so nothing else on the page can add blank pages when printing */
 function PrintRoot({ children }: { children: React.ReactNode }) {
   const [el, setEl] = useState<HTMLElement | null>(null);
   useEffect(() => {
@@ -258,39 +484,30 @@ const CSS = (size: "a6" | "a4") => `
   .to { border: 1.5px solid #000; border-radius: 2mm; padding: 2mm 2.5mm; flex: 1; display: flex; flex-direction: column; gap: .8mm; min-height: 0; }
   .to p { margin: 0; }
   .name { font-size: 13pt; font-weight: 700; }
-  .phone { font-size: 13pt; font-weight: 700; letter-spacing: .03em; }
-  .addr { font-size: 10pt; }
-  .city { font-size: 20pt; font-weight: 900; letter-spacing: .04em; margin-top: auto !important; }
-  .boxes .box { flex: 1; border: 1.5px solid #000; border-radius: 2mm; padding: 1.5mm 2mm; display: flex; flex-direction: column; align-items: center; text-align: center; }
-  .box span { font-size: 7pt; font-weight: 700; letter-spacing: .06em; }
-  .box b { font-size: 17pt; font-weight: 900; line-height: 1.1; }
-  .box b.small { font-size: 11pt; }
-  .box em { font-size: 6.5pt; font-style: normal; color: #333; }
-  .box.cod { background: #000; color: #fff; }
-  .box.cod span { color: #fff; }
-  .box.closed { background: repeating-linear-gradient(45deg, #fff, #fff 2mm, #eee 2mm, #eee 4mm); }
-  .order { align-items: center; }
-  .ordbc { width: 46%; display: flex; flex-direction: column; align-items: center; }
-  .ordbc .bc { width: 100%; height: 9mm; }
+  .phone { font-size: 11pt; font-weight: 700; }
+  .addr { font-size: 9.5pt; flex: 1; overflow: hidden; }
+  .city { font-size: 14pt; font-weight: 900; letter-spacing: .04em; margin-top: auto; }
+  .boxes { gap: 2mm; }
+  .box { flex: 1; border: 1.5px solid #000; border-radius: 2mm; padding: 2mm; display: flex; flex-direction: column; justify-content: center; }
+  .box span { font-size: 6.5pt; letter-spacing: .06em; }
+  .box b { font-size: 15pt; line-height: 1.1; }
+  .box b.small { font-size: 10.5pt; }
+  .box em { font-style: normal; font-size: 6.5pt; color: #555; margin-top: .5mm; }
+  .box.cod { background: #000; color: #fff; border-color: #000; }
+  .box.open { background: #f5f5f5; }
+  .box.closed { background: #fafafa; border-style: dashed; }
+  .order { align-items: center; justify-content: space-between; border-top: 1px dashed #888; border-bottom: 1px dashed #888; padding: 1.5mm 0; }
+  .ordbc { display: flex; flex-direction: column; align-items: flex-start; }
+  .ordbc .bc { width: 42mm; height: 7mm; }
   .ordbc .mono { font-size: 8.5pt; }
-  .meta { flex: 1; display: flex; flex-direction: column; gap: .5mm; font-size: 8pt; }
-  .note { margin: 0; border: 1px dashed #000; padding: 1mm 2mm; font-size: 8.5pt; font-weight: 700; }
-  .from { border-top: 1px solid #000; padding-top: 1.2mm; font-size: 7.5pt; }
-  .pick { background: #fff; max-width: 190mm; margin: 0 auto; padding: 8mm; font-size: 10pt; }
-  .pick h1 { font-size: 15pt; margin: 0; } .pick h2 { font-size: 11pt; margin: 6mm 0 2mm; }
-  .pick table { width: 100%; border-collapse: collapse; } .pick th, .pick td { border: 1px solid #999; padding: 1.5mm 2mm; text-align: left; vertical-align: top; }
-  .pick th { background: #f0f0f0; font-size: 8.5pt; } .pick .chk { width: 6mm; text-align: center; font-size: 12pt; } .pick .qty { text-align: right; font-weight: 700; white-space: nowrap; }
+  .meta { display: flex; flex-direction: column; font-size: 7.5pt; text-align: right; }
+  .meta span b { font-weight: 700; }
+  .note { background: #fff8e6; border: 1px solid #ffd666; border-radius: 1.5mm; padding: 1mm 2mm; font-size: 7.5pt; font-weight: 600; margin: 0; }
+  .from { font-size: 7pt; color: #444; }
   @media print {
+    body { background: #fff; }
     .no-print { display: none !important; }
-    body { background: #fff !important; }
-    .labels-page { padding: 0; }
-    @page { size: ${size === "a4" ? "A4" : "4in 6in"}; margin: 0; }
-    .sheet { gap: 0; grid-template-columns: ${size === "a4" ? "repeat(2, 105mm)" : "101.6mm"}; }
-    .label { border: none; ${size === "a4" ? "outline: .2mm dashed #999; outline-offset: -.1mm;" : ""} break-inside: avoid; page-break-inside: avoid; }
-    html, body { height: auto !important; min-height: 0 !important; margin: 0 !important; padding: 0 !important; }
-    .sheet { row-gap: 0 !important; column-gap: 0 !important; align-content: start; }
-    .label { height: ${size === "a4" ? "147mm" : "150mm"} !important; margin: ${size === "a4" ? "0" : "1mm 0"}; }
-    ${size === "a6" ? ".label:not(:last-child) { page-break-after: always; }" : ".label:nth-child(4n):not(:last-child) { page-break-after: always; }"}
-    .pick { padding: 10mm; max-width: none; }
+    .sheet { gap: 0; }
+    .label { page-break-after: always; break-after: page; border: none; }
   }
 `;

@@ -707,5 +707,26 @@ export const coinTransactions = mysqlTable("coin_transactions", {
   ...timestamps,
 });
 
+/* ───────────── Marketing, Pixels & Ad Integrations ───────────── */
+
+export const marketingSettings = mysqlTable("marketing_settings", {
+  id: int("id").primaryKey().autoincrement(),
+  enabled: boolean("enabled").notNull().default(true),
+  metaPixelId: varchar("meta_pixel_id", { length: 64 }),
+  tiktokPixelId: varchar("tiktok_pixel_id", { length: 64 }),
+  googleTagId: varchar("google_tag_id", { length: 64 }),
+  googleAdsConversionId: varchar("google_ads_conversion_id", { length: 128 }),
+  googleSearchConsoleCode: varchar("google_search_console_code", { length: 255 }),
+  pinterestTagId: varchar("pinterest_tag_id", { length: 64 }),
+  snapchatPixelId: varchar("snapchat_pixel_id", { length: 64 }),
+  trackPurchases: boolean("track_purchases").notNull().default(true),
+  trackAddToCart: boolean("track_add_to_cart").notNull().default(true),
+  trackInitiateCheckout: boolean("track_initiate_checkout").notNull().default(true),
+  updatedAt: timestamp("updated_at", { mode: "date", fsp: 3 })
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP(3)`),
+});
+
+
 
 

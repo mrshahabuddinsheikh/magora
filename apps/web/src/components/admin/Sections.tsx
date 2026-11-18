@@ -696,7 +696,7 @@ export function Models() {
     try {
       const fd = new FormData();
       fd.append("file", file);
-      const res = await api<{ data: { url: string; bytes: number } }>("/api/v1/uploads/model", {
+      const res = await api<{ data: { url: string; bytes: number } }>("/uploads/model", {
         method: "POST",
         body: fd,
       });
@@ -868,17 +868,31 @@ export function Models() {
 
                   {/* 3D Asset Source (Procedural vs Uploaded GLB) */}
                   <td>
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-1.5">
                       {m.model3dUrl ? (
-                        <span
-                          title={m.model3dUrl}
-                          className="inline-flex items-center gap-1 rounded-md bg-blue-500/10 px-2 py-0.5 text-[11px] font-semibold text-blue-700"
-                        >
-                          Custom .GLB
-                        </span>
+                        <div className="flex items-center gap-1">
+                          <span
+                            title={m.model3dUrl}
+                            className="inline-flex items-center gap-1 rounded-md bg-blue-500/10 px-2 py-0.5 text-[11px] font-semibold text-blue-700 max-w-[100px] truncate"
+                          >
+                            Custom .GLB
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (confirm(`Remove custom 3D model for ${m.name} and revert to built-in procedural 3D?`)) {
+                                patch(m.id, { model3dUrl: null });
+                              }
+                            }}
+                            className="text-[10.5px] text-danger hover:underline"
+                            title="Remove GLB and revert to built-in 3D model"
+                          >
+                            Reset
+                          </button>
+                        </div>
                       ) : (
                         <span className="inline-flex items-center gap-1 rounded-md bg-emerald-500/10 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
-                          Procedural 3D
+                          Built-in 3D
                         </span>
                       )}
 
@@ -887,9 +901,10 @@ export function Models() {
                           "cursor-pointer rounded-lg border border-black/10 bg-black/[0.03] px-2 py-1 text-[11px] font-medium text-ink hover:bg-black/[0.08] transition flex items-center gap-1",
                           uploadingForId === m.id && "opacity-50 pointer-events-none",
                         )}
+                        title="Upload a new 3D .glb binary file"
                       >
                         <Upload size={12} />
-                        {uploadingForId === m.id ? "Uploading..." : "Upload .glb"}
+                        {uploadingForId === m.id ? "Uploading..." : "Update .glb"}
                         <input
                           type="file"
                           accept=".glb"
@@ -900,6 +915,18 @@ export function Models() {
                           }}
                         />
                       </label>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const url = prompt("Enter 3D model .glb URL (e.g. from CDN or S3):", m.model3dUrl || "");
+                          if (url !== null) patch(m.id, { model3dUrl: url.trim() || null });
+                        }}
+                        className="rounded-lg border border-black/10 bg-black/[0.02] px-1.5 py-1 text-[10.5px] text-muted hover:text-ink transition"
+                        title="Paste direct 3D URL"
+                      >
+                        URL
+                      </button>
                     </div>
                   </td>
 

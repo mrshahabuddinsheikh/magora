@@ -24,6 +24,7 @@ import { leadsRoutes } from "./modules/leads";
 import { pushRoutes } from "./modules/push";
 import { reelRoutes } from "./modules/reels";
 import { databaseBackupRoutes } from "./modules/databaseBackup";
+import { marketingRoutes } from "./modules/marketing";
 import { registerBlueTeamSecurity } from "./lib/security";
 import multipart from "@fastify/multipart";
 
@@ -110,6 +111,7 @@ export async function buildApp() {
       await v1.register(adminEngageRoutes, { prefix: "/admin" });
       await v1.register(deskRoutes, { prefix: "/admin" });
       await v1.register(databaseBackupRoutes, { prefix: "/admin" });
+      await v1.register(marketingRoutes);
     },
     { prefix: "/api/v1" },
   );

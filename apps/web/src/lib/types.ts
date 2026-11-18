@@ -218,3 +218,24 @@ export interface TrustSettings {
   intervalSec: number;
   durationSec: number;
 }
+
+export interface MarketingSettings {
+  id: number;
+  enabled: boolean;
+  metaPixelId: string | null;
+  tiktokPixelId: string | null;
+  googleTagId: string | null;
+  googleAdsConversionId: string | null;
+  googleSearchConsoleCode: string | null;
+  pinterestTagId?: string | null;
+  snapchatPixelId?: string | null;
+  trackPurchases: boolean;
+  trackAddToCart: boolean;
+  trackInitiateCheckout: boolean;
+}
+
+export interface CityStat {
+  city: string;
+  orders: number;
+  revenue: number;
+}

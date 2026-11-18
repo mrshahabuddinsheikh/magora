@@ -7,6 +7,7 @@ import { Check, Circle, Clock, ExternalLink, MapPin, Phone, RotateCcw, Truck, X,
 import { cn, dateTime, money } from "@/lib/format";
 import { api } from "@/lib/client-api";
 import type { Order, ReturnRequest } from "@/lib/types";
+import { VanDeliveryAnimation } from "./VanDeliveryAnimation";
 
 const LiveMap = dynamic(() => import("./LiveMap").then((m) => m.LiveMap), { ssr: false, loading: () => <div className="skeleton h-[260px] rounded-[20px]" /> });
 
@@ -56,6 +57,9 @@ export function OrderView({ order: o, token, phone, refresh, admin = false }: { 
 
   return (
     <div className="space-y-4">
+      {/* Delightful Delivery Van Dispatch Animation */}
+      <VanDeliveryAnimation orderNumber={o.number} customerName={o.customer?.name} />
+
       {/* status */}
       <div className="card p-5 sm:p-7">
         <div className="flex flex-wrap items-center justify-between gap-2">

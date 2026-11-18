@@ -67,7 +67,7 @@ export async function adminRoutes(app: FastifyInstance) {
     ]);
     const since14 = new Date(Date.now() - 13 * 864e5);
     since14.setHours(0, 0, 0, 0);
-    const [daily, byStatus, top, openReturns, onRoad] = await Promise.all([
+    const [daily, byStatus, top, openReturns, onRoad, cityBreakdown] = await Promise.all([
       db
         .select({ day: sql<string>`DATE_FORMAT(CONVERT_TZ(${s.orders.createdAt}, '+00:00', '+05:00'), '%Y-%m-%d')`, orders: count(), revenue: sql<number>`coalesce(sum(${s.orders.total}),0)` })
         .from(s.orders)
@@ -84,6 +84,17 @@ export async function adminRoutes(app: FastifyInstance) {
         .limit(5),
       db.select({ n: count() }).from(s.returnRequests).where(sql`${s.returnRequests.status} in ('requested','approved','pickup_scheduled','received')`),
       db.select({ n: count() }).from(s.shipments).where(sql`${s.shipments.status} not in ('delivered','returned_to_sender')`),
+      db
+        .select({
+          city: s.orders.city,
+          orders: count(),
+          revenue: sql<number>`coalesce(sum(${s.orders.total}), 0)`,
+        })
+        .from(s.orders)
+        .where(sql`${s.orders.status} not in ('cancelled')`)
+        .groupBy(s.orders.city)
+        .orderBy(desc(count()))
+        .limit(25),
     ]);
     const series = Array.from({ length: 14 }, (_, i) => {
       const d = new Date(since14.getTime() + i * 864e5 + 5 * 3600e3).toISOString().slice(0, 10);
@@ -95,6 +106,7 @@ export async function adminRoutes(app: FastifyInstance) {
         series,
         byStatus: Object.fromEntries(byStatus.map((r) => [r.status, r.n])),
         topProducts: top,
+        cityStats: cityBreakdown.map((c) => ({ city: c.city || "Unknown", orders: Number(c.orders || 0), revenue: Number(c.revenue || 0) })),
         openReturns: openReturns[0].n,
         deliveriesOnRoad: onRoad[0].n,
         today,

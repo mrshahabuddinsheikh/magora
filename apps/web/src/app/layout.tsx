@@ -18,7 +18,28 @@ export const metadata: Metadata = {
   title: { default: `${STORE_NAME} — MagSafe Cases, Skins & Gadgets in 3D · Cash on Delivery`, template: `%s · ${STORE_NAME}` },
   description:
     "MagSafe-compatible cases for iPhone, Samsung Galaxy and Google Pixel. Pick your phone, see the case on it in 3D, pay cash on delivery anywhere in Pakistan.",
-  openGraph: { type: "website", siteName: STORE_NAME, locale: "en_PK" },
+  openGraph: {
+    type: "website",
+    siteName: STORE_NAME,
+    locale: "en_PK",
+    title: `${STORE_NAME} — MagSafe Cases, Skins & Gadgets in 3D · Cash on Delivery`,
+    description:
+      "MagSafe-compatible cases for iPhone, Samsung Galaxy and Google Pixel. Pick your phone, see the case on it in 3D, pay cash on delivery anywhere in Pakistan.",
+    images: [
+      {
+        url: `${SITE_URL}/opengraph-image.jpg`,
+        width: 1200,
+        height: 630,
+        alt: `${STORE_NAME} Store`,
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: `${STORE_NAME} — MagSafe Cases, Skins & Gadgets in 3D`,
+    description: "Interactive 3D MagSafe cases, skins and screen protectors with Cash on Delivery across Pakistan.",
+    images: [`${SITE_URL}/opengraph-image.jpg`],
+  },
   applicationName: STORE_NAME,
   manifest: "/manifest.webmanifest",
   appleWebApp: {

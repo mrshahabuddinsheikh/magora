@@ -1,8 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { Banknote, BarChart3, Bell, Boxes, Building2, ClipboardList, Coins, Contact2, Database, Gift, LogOut, MessageSquare, Package, Palette, PhoneCall, PieChart, Radio, RotateCcw, ShieldCheck, Smartphone, Store, Tag, Truck, Users, Video } from "lucide-react";
+import { useEffect, useState, useMemo } from "react";
+import { 
+  Banknote, BarChart3, Bell, Boxes, Building2, ClipboardList, Coins, Contact2, 
+  Database, Gift, LogOut, MessageSquare, Package, Palette, PhoneCall, PieChart, 
+  Radio, RotateCcw, ShieldCheck, Smartphone, Store, Tag, Truck, Users, Video, 
+  Share2, Search, ChevronDown, ChevronRight
+} from "lucide-react";
 import { useAuth } from "@/stores/auth";
 import { cn } from "@/lib/format";
 import { Logo } from "@/components/Header";
@@ -22,34 +27,107 @@ import { LoyaltyManager } from "@/components/admin/LoyaltyManager";
 import { ReelsManager } from "@/components/admin/ReelsManager";
 import { DatabaseBackupManager } from "@/components/admin/DatabaseBackupManager";
 import { CodSettingsManager } from "@/components/admin/CodSettingsManager";
+import { MarketingPixelsManager } from "@/components/admin/MarketingPixelsManager";
 import { api } from "@/lib/client-api";
 
-type Tab = "overview" | "backup" | "cod-settings" | "security" | "confirm" | "desk" | "return-report" | "alerts" | "orders" | "deliveries" | "returns" | "customers" | "leads" | "lead-capture" | "loyalty" | "reels" | "products" | "brands" | "categories" | "trust" | "coupons" | "models" | "reviews";
-const TABS: [Tab, string, typeof Store][] = [
-  ["overview", "Dashboard", BarChart3],
-  ["cod-settings", "Cash on Delivery (COD) Charges", Banknote],
-  ["loyalty", "Magora Coins & Loyalty Rewards", Coins],
-  ["backup", "Database Backup & Restore", Database],
-  ["security", "Cyber Security Shield", ShieldCheck],
-  ["confirm", "Confirm COD orders", PhoneCall],
-  ["desk", "Order desk · pack & ship", ClipboardList],
-  ["orders", "Orders", Package],
-  ["deliveries", "Live deliveries", Truck],
-  ["returns", "Returns", RotateCcw],
-  ["return-report", "Return analysis", PieChart],
-  ["customers", "Customers", Users],
-  ["leads", "WhatsApp Leads & Excel CRM", Contact2],
-  ["lead-capture", "Lead Capture Popup & Voucher", Gift],
-  ["reels", "TikTok & Insta Reels", Video],
-  ["products", "Products & stock", Boxes],
-  ["brands", "Brands & Companies", Building2],
-  ["categories", "Categories & 3D Styles", Palette],
-  ["trust", "Social Proof Popups", Radio],
-  ["alerts", "Back-in-stock requests", Bell],
-  ["coupons", "Coupons", Tag],
-  ["models", "Phone models", Smartphone],
-  ["reviews", "Reviews", MessageSquare],
+export type Tab = 
+  | "overview" 
+  | "backup" 
+  | "cod-settings" 
+  | "security" 
+  | "confirm" 
+  | "desk" 
+  | "return-report" 
+  | "alerts" 
+  | "orders" 
+  | "deliveries" 
+  | "returns" 
+  | "customers" 
+  | "leads" 
+  | "lead-capture" 
+  | "loyalty" 
+  | "reels" 
+  | "products" 
+  | "brands" 
+  | "categories" 
+  | "trust" 
+  | "coupons" 
+  | "models" 
+  | "reviews"
+  | "marketing-pixels";
+
+interface TabItem {
+  id: Tab;
+  label: string;
+  icon: typeof Store;
+}
+
+interface CategoryGroup {
+  id: string;
+  title: string;
+  icon?: typeof Store;
+  tabs: TabItem[];
+}
+
+const CATEGORIES: CategoryGroup[] = [
+  {
+    id: "operations",
+    title: "Operations & Orders",
+    tabs: [
+      { id: "overview", label: "Dashboard & Analytics", icon: BarChart3 },
+      { id: "confirm", label: "Confirm COD Orders", icon: PhoneCall },
+      { id: "desk", label: "Pack & Ship Desk", icon: ClipboardList },
+      { id: "orders", label: "All Orders", icon: Package },
+      { id: "deliveries", label: "Live Deliveries", icon: Truck },
+      { id: "returns", label: "Returns Management", icon: RotateCcw },
+      { id: "return-report", label: "Return Analytics", icon: PieChart },
+      { id: "alerts", label: "Back-in-Stock Alerts", icon: Bell },
+    ],
+  },
+  {
+    id: "catalog",
+    title: "Catalog & 3D Studio",
+    tabs: [
+      { id: "products", label: "Products & Stock", icon: Boxes },
+      { id: "models", label: "Phone Models & 3D GLB", icon: Smartphone },
+      { id: "brands", label: "Brands & Companies", icon: Building2 },
+      { id: "categories", label: "Categories & 3D Styles", icon: Palette },
+      { id: "reviews", label: "Customer Reviews", icon: MessageSquare },
+    ],
+  },
+  {
+    id: "marketing",
+    title: "Marketing & Ad Pixels",
+    tabs: [
+      { id: "marketing-pixels", label: "Meta, TikTok & Google Ads", icon: Share2 },
+      { id: "lead-capture", label: "Lead Capture Popup", icon: Gift },
+      { id: "leads", label: "WhatsApp Leads CRM", icon: Contact2 },
+      { id: "reels", label: "TikTok & Insta Reels", icon: Video },
+      { id: "trust", label: "Social Proof Popups", icon: Radio },
+      { id: "coupons", label: "Discount Coupons", icon: Tag },
+    ],
+  },
+  {
+    id: "pricing",
+    title: "Pricing & Loyalty Engine",
+    tabs: [
+      { id: "cod-settings", label: "COD Delivery Fees", icon: Banknote },
+      { id: "loyalty", label: "Magora Coins & Loyalty", icon: Coins },
+      { id: "customers", label: "Customer Accounts", icon: Users },
+    ],
+  },
+  {
+    id: "system",
+    title: "System & Security",
+    tabs: [
+      { id: "backup", label: "MySQL Backup & Restore", icon: Database },
+      { id: "security", label: "Cyber Security Shield", icon: ShieldCheck },
+    ],
+  },
 ];
+
+// Flat list of all tabs for quick lookup
+const ALL_TABS: TabItem[] = CATEGORIES.flatMap((c) => c.tabs);
 
 export default function AdminPage() {
   const { user, ready, login, logout, init } = useAuth();
@@ -58,19 +136,26 @@ export default function AdminPage() {
   const [key, setKey] = useState(0);
   const [err, setErr] = useState<string | null>(null);
   const [badges, setBadges] = useState<Partial<Record<Tab, number>>>({});
+  const [search, setSearch] = useState("");
+  const [mobileCategory, setMobileCategory] = useState<string>("operations");
 
   useEffect(() => {
     if (!ready) init();
     const fromHash = () => {
       const h = window.location.hash.slice(1) as Tab;
-      if (TABS.some(([t]) => t === h)) setTab(h);
+      if (ALL_TABS.some((t) => t.id === h)) {
+        setTab(h);
+        // Find category
+        const cat = CATEGORIES.find((c) => c.tabs.some((t) => t.id === h));
+        if (cat) setMobileCategory(cat.id);
+      }
     };
     fromHash();
     window.addEventListener("hashchange", fromHash);
     return () => window.removeEventListener("hashchange", fromHash);
   }, [ready, init]);
 
-  // little counters on the menu (refresh every minute)
+  // Counters refresh every 30 seconds
   useEffect(() => {
     if (user?.role !== "admin") return;
     let last: number | null = null;
@@ -80,7 +165,7 @@ export default function AdminPage() {
           const n = r.data.codToConfirm ?? 0;
           if (last !== null && n > last) newOrderAlert(n - last);
           last = n;
-          document.title = n ? `(${n}) Admin` : "Admin";
+          document.title = n ? `(${n}) Magora Admin` : "Magora Admin";
           setBadges({ confirm: r.data.codToConfirm, desk: r.data.toPack, alerts: r.data.stockAlertsWaiting, returns: r.data.openReturns });
         })
         .catch(() => {});
@@ -93,9 +178,21 @@ export default function AdminPage() {
     setTab(t as Tab);
     setExtra(x);
     setKey((k) => k + 1);
+    const cat = CATEGORIES.find((c) => c.tabs.some((item) => item.id === t));
+    if (cat) setMobileCategory(cat.id);
     history.replaceState(null, "", `#${t}`);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
+
+  // Filter tabs if user types in search
+  const filteredCategories = useMemo(() => {
+    if (!search.trim()) return CATEGORIES;
+    const q = search.toLowerCase();
+    return CATEGORIES.map((cat) => ({
+      ...cat,
+      tabs: cat.tabs.filter((t) => t.label.toLowerCase().includes(q) || t.id.toLowerCase().includes(q)),
+    })).filter((cat) => cat.tabs.length > 0);
+  }, [search]);
 
   if (!ready) return <div className="skeleton mx-auto mt-10 h-72 max-w-md rounded-[28px]" />;
 
@@ -126,32 +223,130 @@ export default function AdminPage() {
       </div>
     );
 
+  const currentTabObj = ALL_TABS.find((t) => t.id === tab);
+
   return (
-    <div className="grid grid-cols-[minmax(0,1fr)] gap-4 pb-10 pt-3 lg:grid-cols-[230px_minmax(0,1fr)]">
+    <div className="grid grid-cols-[minmax(0,1fr)] gap-4 pb-12 pt-3 lg:grid-cols-[250px_minmax(0,1fr)]">
+      {/* Sidebar */}
       <aside className="min-w-0 lg:sticky lg:top-4 lg:self-start">
-        <div className="crystal rounded-[26px] p-3">
-          <div className="px-2 pb-3 pt-1"><Logo /></div>
-          <nav className="no-scrollbar flex gap-1 overflow-x-auto lg:flex-col">
-            {TABS.map(([t, l, I]) => (
+        <div className="crystal rounded-[26px] p-3 shadow-sm border border-black/5 dark:border-white/10 max-h-[calc(100vh-2rem)] flex flex-col">
+          <div className="px-2 pb-3 pt-1 flex items-center justify-between">
+            <Logo />
+            <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary uppercase tracking-wider">
+              Admin
+            </span>
+          </div>
+
+          {/* Quick Filter Search */}
+          <div className="relative mb-2 px-1">
+            <Search size={14} className="absolute left-3 top-2.5 text-ink/40" />
+            <input
+              type="text"
+              placeholder="Search tabs..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full rounded-xl bg-black/5 dark:bg-white/5 pl-8 pr-3 py-1.5 text-xs font-medium text-ink outline-none placeholder:text-ink/40 focus:ring-1 focus:ring-primary"
+            />
+          </div>
+
+          {/* Mobile Category Switcher Pills */}
+          <div className="no-scrollbar flex gap-1.5 overflow-x-auto pb-2 lg:hidden">
+            {CATEGORIES.map((cat) => (
               <button
-                key={t}
-                onClick={() => go(t)}
-                className={cn("flex shrink-0 items-center gap-2.5 rounded-2xl px-3 py-2.5 text-left text-[14px] font-medium transition", tab === t ? "bg-white shadow-sm" : "text-ink/70 hover:bg-white/60")}
+                key={cat.id}
+                onClick={() => setMobileCategory(cat.id)}
+                className={cn(
+                  "shrink-0 rounded-full px-3 py-1 text-xs font-semibold transition",
+                  mobileCategory === cat.id
+                    ? "bg-primary text-white shadow-sm"
+                    : "bg-white/70 dark:bg-white/10 text-ink/70 hover:bg-white"
+                )}
               >
-                <I size={16} /> {l}
-                {!!badges[t] && <span className="ml-auto rounded-full bg-[#e11d74] px-1.5 py-0.5 text-[10.5px] font-bold leading-none text-white">{badges[t]}</span>}
+                {cat.title}
               </button>
             ))}
+          </div>
+
+          {/* Navigation Items */}
+          <nav className="no-scrollbar flex-1 overflow-y-auto space-y-4 pr-0.5">
+            {filteredCategories.map((cat) => {
+              // On mobile, show only selected category unless searching
+              const isHiddenOnMobile = !search && mobileCategory !== cat.id;
+
+              return (
+                <div key={cat.id} className={cn("space-y-1", isHiddenOnMobile && "hidden lg:block")}>
+                  <div className="px-2.5 py-1 text-[11px] font-extrabold uppercase tracking-wider text-ink/40">
+                    {cat.title}
+                  </div>
+                  <div className="space-y-0.5">
+                    {cat.tabs.map((t) => {
+                      const Icon = t.icon;
+                      const active = tab === t.id;
+                      const badge = badges[t.id];
+
+                      return (
+                        <button
+                          key={t.id}
+                          onClick={() => go(t.id)}
+                          className={cn(
+                            "group flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left text-[13.5px] font-medium transition",
+                            active
+                              ? "bg-primary text-white shadow-sm"
+                              : "text-ink/75 hover:bg-white/70 dark:hover:bg-white/10"
+                          )}
+                        >
+                          <Icon size={16} className={cn("shrink-0", active ? "text-white" : "text-ink/60 group-hover:text-primary")} />
+                          <span className="truncate flex-1">{t.label}</span>
+                          {badge !== undefined && badge > 0 && (
+                            <span
+                              className={cn(
+                                "shrink-0 rounded-full px-1.5 py-0.5 text-[10.5px] font-bold leading-none",
+                                active ? "bg-white text-primary" : "bg-[#e11d74] text-white"
+                              )}
+                            >
+                              {badge}
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
           </nav>
-          <div className="mt-2 flex gap-1 border-t border-white/70 pt-2 lg:flex-col">
-            <Link href="/" className="flex items-center gap-2.5 rounded-2xl px-3 py-2.5 text-[14px] text-ink/70 hover:bg-white/60"><Store size={16} /> View store</Link>
-            <button onClick={logout} className="flex items-center gap-2.5 rounded-2xl px-3 py-2.5 text-left text-[14px] text-danger hover:bg-white/60"><LogOut size={16} /> Log out</button>
+
+          {/* Bottom Actions */}
+          <div className="mt-2 flex gap-1 border-t border-black/5 dark:border-white/10 pt-2 lg:flex-col shrink-0">
+            <Link
+              href="/"
+              className="flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-[13px] font-medium text-ink/70 hover:bg-white/60 dark:hover:bg-white/10"
+            >
+              <Store size={15} /> View Store
+            </Link>
+            <button
+              onClick={logout}
+              className="flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-left text-[13px] font-medium text-danger hover:bg-white/60 dark:hover:bg-white/10"
+            >
+              <LogOut size={15} /> Log Out
+            </button>
           </div>
         </div>
       </aside>
+
+      {/* Main Tab Content */}
       <section className="min-w-0" key={key}>
-        <h1 className="mb-4 text-[26px] font-bold tracking-tight">{TABS.find(([t]) => t === tab)?.[1]}</h1>
+        <div className="mb-4 flex items-center justify-between">
+          <h1 className="text-[24px] font-extrabold tracking-tight">
+            {currentTabObj?.label ?? "Admin"}
+          </h1>
+          <span className="text-xs font-medium text-ink/50 bg-black/5 dark:bg-white/5 px-2.5 py-1 rounded-full">
+            {CATEGORIES.find((c) => c.tabs.some((t) => t.id === tab))?.title}
+          </span>
+        </div>
+
         {tab === "overview" && <Overview go={go} />}
+        {tab === "marketing-pixels" && <MarketingPixelsManager />}
         {tab === "cod-settings" && <CodSettingsManager />}
         {tab === "backup" && <DatabaseBackupManager />}
         {tab === "security" && <SecurityShield />}

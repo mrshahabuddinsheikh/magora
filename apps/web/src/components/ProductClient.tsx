@@ -20,6 +20,8 @@ import { usePrefs } from "@/stores/prefs";
 import { cn, money, pctOff } from "@/lib/format";
 import { detectUserDevice } from "@/lib/device-detect";
 import { api } from "@/lib/client-api";
+import { track } from "@/lib/track";
+import { triggerFlyToBag } from "./FlyToBagAnimation";
 import type { Product, ProductModel, LoyaltyConfig } from "@/lib/types";
 
 const SKIN_SIDES = 300; // keep in sync with store.skinSidesPrice in the API
@@ -250,6 +252,11 @@ export function ProductClient({ product: p, delivery }: { product: Product; deli
     const ok = await add(variant.id, qty, { name: p.name, model: model.name, color: color.name, hex: color.hex }, custom);
     if (ok) {
       setAdded(true);
+      triggerFlyToBag(ctaRef.current, { name: p.name, colorHex: color.hex, emoji: "📱" });
+      track("add_to_cart", {
+        value: price * qty,
+        items: [{ id: variant.id, name: `${p.name} - ${model.name}`, price, qty, category: p.category?.slug }],
+      });
       setTimeout(() => setAdded(false), 1800);
       if (thenCheckout) {
         useCart.getState().setOpen(false);

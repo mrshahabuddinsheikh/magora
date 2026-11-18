@@ -268,7 +268,7 @@ export function Header() {
               <Link href="/account" className="hidden h-10 w-10 place-items-center rounded-full hover:bg-white/70 sm:grid" aria-label={user ? "My account" : "Log in"}>
                 <User size={20} />
               </Link>
-              <button onClick={() => openCart(true)} className="relative grid h-10 w-10 place-items-center rounded-full hover:bg-white/70" aria-label={`Cart, ${count} items`}>
+              <button id="header-cart-btn" onClick={() => openCart(true)} className="relative grid h-10 w-10 place-items-center rounded-full hover:bg-white/70 transition-transform" aria-label={`Cart, ${count} items`}>
                 <ShoppingBag size={20} />
                 {count > 0 && (
                   <span className="absolute -right-0.5 -top-0.5 grid h-[19px] min-w-[19px] place-items-center rounded-full bg-accent px-1 text-[11px] font-bold text-white shadow">{count}</span>

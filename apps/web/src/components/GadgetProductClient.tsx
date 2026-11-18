@@ -13,6 +13,8 @@ import { DeliveryEstimate, NotifyMe, ShareProduct, type DeliveryInfo } from "./P
 import { useCart } from "@/stores/cart";
 import { cn, money, pctOff } from "@/lib/format";
 import { WHATSAPP } from "@/lib/config";
+import { track } from "@/lib/track";
+import { triggerFlyToBag } from "./FlyToBagAnimation";
 import type { Product } from "@/lib/types";
 
 /** Product page for universal gadgets: no phone step — pick an option, see it in 3D, buy. */
@@ -75,6 +77,11 @@ export function GadgetProductClient({ product: p, delivery }: { product: Product
     const ok = await add(variant.id, qty, { name: p.name, model: "", color: color.name, hex: color.hex });
     if (ok) {
       setAdded(true);
+      triggerFlyToBag(null, { name: p.name, colorHex: color.hex, emoji: "⚡" });
+      track("add_to_cart", {
+        value: variant.price * qty,
+        items: [{ id: variant.id, name: p.name, price: variant.price, qty, category: "gadgets" }],
+      });
       setTimeout(() => setAdded(false), 1800);
       if (thenCheckout) {
         useCart.getState().setOpen(false);

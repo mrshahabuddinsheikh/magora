@@ -28,13 +28,39 @@ export async function generateMetadata(props: PageProps<"/product/[slug]">): Pro
   const p = await getProduct(slug);
   if (!p) return { title: "Case not found" };
   const gadget = p.category?.section === "gadgets";
+  const title = gadget
+    ? `${p.name} — ${p.category?.name?.replace(/s$/, "") ?? "Gadget"} · Cash on Delivery`
+    : `${p.name} — ${p.category?.slug === "magsafe-cases" ? "MagSafe case" : p.category?.name?.replace(/s$/, "") ?? ""} for iPhone, Samsung & Pixel`;
+  const productPrice = p.minPrice || p.basePrice || 0;
+  const desc = `${p.subtitle}. From Rs. ${productPrice.toLocaleString()} — Cash on delivery across Pakistan.`;
+  const imageUrl = (p as any).images?.[0] || (p as any).image || `${SITE_URL}/opengraph-image.jpg`;
+
   return {
-    title: gadget
-      ? `${p.name} — ${p.category.name.replace(/s$/, "")} · Cash on Delivery`
-      : `${p.name} — ${p.category?.slug === "magsafe-cases" ? "MagSafe case" : p.category?.name.replace(/s$/, "") ?? ""} for iPhone, Samsung & Pixel`,
-    description: `${p.subtitle}. ${p.description.slice(0, 120)}… Cash on delivery across Pakistan.`,
+    title,
+    description: desc,
     alternates: { canonical: `/product/${p.slug}` },
-    openGraph: { title: p.name, description: p.subtitle },
+    openGraph: {
+      title,
+      description: desc,
+      url: `${SITE_URL}/product/${p.slug}`,
+      siteName: "Magora",
+      type: "website",
+      locale: "en_PK",
+      images: [
+        {
+          url: imageUrl,
+          width: 1200,
+          height: 630,
+          alt: p.name,
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description: desc,
+      images: [imageUrl],
+    },
   };
 }
 
