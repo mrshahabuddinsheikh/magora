@@ -22,6 +22,7 @@ import { detectUserDevice } from "@/lib/device-detect";
 import { api } from "@/lib/client-api";
 import { track } from "@/lib/track";
 import { triggerFlyToBag } from "./FlyToBagAnimation";
+import { FastCodModal } from "./FastCodModal";
 import type { Product, ProductModel, LoyaltyConfig } from "@/lib/types";
 
 const SKIN_SIDES = 300; // keep in sync with store.skinSidesPrice in the API
@@ -62,6 +63,7 @@ export function ProductClient({ product: p, delivery }: { product: Product; deli
   const [added, setAdded] = useState(false);
   const [barDismissed, setBarDismissed] = useState(false);
   const [ready, setReady] = useState(false);
+  const [showFastCod, setShowFastCod] = useState(false);
   const [showBar, setShowBar] = useState(false);
   const [detectedPhone, setDetectedPhone] = useState<{ name: string; model: ProductModel } | null>(null);
   const [savedPhonePref, setSavedPhonePref] = useState<{ name: string; slug: string } | null>(null);
@@ -672,7 +674,7 @@ export function ProductClient({ product: p, delivery }: { product: Product; deli
                 </button>
               )}
             </div>
-            <button className="btn btn-primary mt-2.5 h-[52px] w-full text-[15.5px]" disabled={soldOut || busy} onClick={() => addToBag(true)}>
+            <button className="btn btn-primary mt-2.5 h-[52px] w-full text-[15.5px]" disabled={soldOut || busy} onClick={() => setShowFastCod(true)}>
               <Zap size={18} /> Buy now · Cash on Delivery
             </button>
             <a
@@ -936,6 +938,16 @@ export function ProductClient({ product: p, delivery }: { product: Product; deli
           </div>
         </div>
       )}
+      <FastCodModal
+        isOpen={showFastCod}
+        onClose={() => setShowFastCod(false)}
+        product={{ id: p.id, name: p.name, slug: p.slug, price }}
+        modelName={model?.name}
+        colorName={color?.name}
+        colorHex={color?.hex}
+        variantId={variant?.id}
+        custom={engravingEnabled && engravingText ? { engraving: { text: engravingText, font: engravingFont } } : undefined}
+      />
     </>
   );
 }

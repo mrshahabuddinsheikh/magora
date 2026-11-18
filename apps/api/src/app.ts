@@ -26,6 +26,7 @@ import { reelRoutes } from "./modules/reels";
 import { databaseBackupRoutes } from "./modules/databaseBackup";
 import { marketingRoutes } from "./modules/marketing";
 import { socialWebhooksRoutes } from "./modules/socialWebhooks";
+import { catalogFeedRoutes } from "./modules/catalogFeed";
 import { registerBlueTeamSecurity } from "./lib/security";
 import multipart from "@fastify/multipart";
 
@@ -114,6 +115,7 @@ export async function buildApp() {
       await v1.register(databaseBackupRoutes, { prefix: "/admin" });
       await v1.register(marketingRoutes);
       await v1.register(socialWebhooksRoutes);
+      await v1.register(catalogFeedRoutes);
     },
     { prefix: "/api/v1" },
   );

@@ -38,6 +38,10 @@ const nextConfig: NextConfig = {
         destination: `${internalApi}/:path*`,
       },
       {
+        source: "/feed.xml",
+        destination: `${internalApi}/feed.xml`,
+      },
+      {
         source: "/uploads/:path*",
         destination: `${internalOrigin}/uploads/:path*`,
       },

@@ -15,6 +15,7 @@ import { cn, money, pctOff } from "@/lib/format";
 import { WHATSAPP } from "@/lib/config";
 import { track } from "@/lib/track";
 import { triggerFlyToBag } from "./FlyToBagAnimation";
+import { FastCodModal } from "./FastCodModal";
 import type { Product } from "@/lib/types";
 
 /** Product page for universal gadgets: no phone step — pick an option, see it in 3D, buy. */
@@ -28,6 +29,7 @@ export function GadgetProductClient({ product: p, delivery }: { product: Product
   const [qty, setQty] = useState(1);
   const [view, setView] = useState<GadgetView>("angle");
   const [nonce, setNonce] = useState(0);
+  const [showFastCod, setShowFastCod] = useState(false);
   const pv = viewOf(p.view);
   const photosOnly = pv.mode === "photos" && p.images.length > 0;
   // -1 = 3D, otherwise photo index; photos-first products open on a photo
@@ -268,7 +270,7 @@ export function GadgetProductClient({ product: p, delivery }: { product: Product
                 {added ? <Check size={18} /> : <ShoppingBag size={18} />} {added ? "Added" : "Add to bag"}
               </button>
             </div>
-            <button className="btn btn-primary mt-2.5 h-[52px] w-full text-[15.5px]" disabled={soldOut || busy} onClick={() => addToBag(true)}>
+            <button className="btn btn-primary mt-2.5 h-[52px] w-full text-[15.5px]" disabled={soldOut || busy} onClick={() => setShowFastCod(true)}>
               <Zap size={18} /> Buy now · Cash on Delivery
             </button>
             <a
@@ -353,6 +355,14 @@ export function GadgetProductClient({ product: p, delivery }: { product: Product
           </button>
         </div>
       </div>
+      <FastCodModal
+        isOpen={showFastCod}
+        onClose={() => setShowFastCod(false)}
+        product={{ id: p.id, name: p.name, slug: p.slug, price }}
+        colorName={color?.name}
+        colorHex={color?.hex}
+        variantId={variant?.id}
+      />
     </>
   );
 }

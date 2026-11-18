@@ -255,6 +255,161 @@ export async function orderRoutes(app: FastifyInstance) {
     },
   );
 
+  /* 1-Click Fast COD Direct Order (No cart required) */
+  app.post(
+    "/orders/fast-cod",
+    {
+      preHandler: optionalAuth,
+      schema: {
+        tags: ["Orders"],
+        summary: "1-Click Direct Cash on Delivery Checkout without creating cart",
+        body: Type.Object({
+          variantId: Type.Integer(),
+          qty: Type.Optional(Type.Integer({ minimum: 1, default: 1 })),
+          customer: Type.Object({
+            name: Type.String({ minLength: 2, maxLength: 100 }),
+            phone: Type.String({ minLength: 10, maxLength: 20 }),
+            email: Type.Optional(Type.String({ maxLength: 120 })),
+          }),
+          address: Type.Object({
+            city: Type.String({ minLength: 2, maxLength: 80 }),
+            line1: Type.String({ minLength: 5, maxLength: 255 }),
+            area: Type.Optional(Type.String({ maxLength: 100 })),
+            postalCode: Type.Optional(Type.String({ maxLength: 30 })),
+          }),
+          notes: Type.Optional(Type.String({ maxLength: 300 })),
+          custom: Type.Optional(Type.Any()),
+        }),
+      },
+    },
+    async (req, reply) => {
+      const b = req.body as {
+        variantId: number;
+        qty?: number;
+        customer: { name: string; phone: string; email?: string };
+        address: { city: string; line1: string; area?: string; postalCode?: string };
+        notes?: string;
+        custom?: any;
+      };
+
+      const phone = normalizePkPhone(b.customer.phone);
+      if (!phone) throw badRequest("Please enter a valid mobile number (e.g. 0300 1234567)", "invalid_phone");
+      if (await isBlocked(phone)) {
+        throw badRequest("Cash on delivery isn't available for this number. Please message us on WhatsApp.", "cod_blocked");
+      }
+
+      const qty = Math.max(1, b.qty || 1);
+
+      // Find variant with product, phone model, and color
+      const [v] = await db
+        .select({
+          variant: s.variants,
+          product: s.products,
+          model: s.phoneModels,
+          color: s.productColors,
+        })
+        .from(s.variants)
+        .innerJoin(s.products, eq(s.variants.productId, s.products.id))
+        .leftJoin(s.phoneModels, eq(s.variants.phoneModelId, s.phoneModels.id))
+        .innerJoin(s.productColors, eq(s.variants.colorId, s.productColors.id))
+        .where(and(eq(s.variants.id, b.variantId), eq(s.variants.active, true)));
+
+      if (!v) throw notFound("Selected product variant is not available", "variant_not_found");
+      if (v.variant.stock < qty) {
+        throw new ApiError(409, "stock_changed", `${v.product.name} only has ${v.variant.stock} left in stock`);
+      }
+
+      const unitPrice = v.variant.price;
+      const subtotal = unitPrice * qty;
+      const shipping = subtotal >= store.shipping.freeAbove ? 0 : store.shipping.flatRate;
+      const codFee = store.cod.fee;
+      const total = subtotal + shipping + codFee;
+
+      const result = await db.transaction(async (tx) => {
+        // Reserve stock
+        const [r] = await tx
+          .update(s.variants)
+          .set({ stock: sql`${s.variants.stock} - ${qty}` })
+          .where(and(eq(s.variants.id, v.variant.id), sql`${s.variants.stock} >= ${qty}`));
+
+        if ((r as any)?.affectedRows !== 1 && (r as any)?.rowsAffected !== 1) {
+          throw new ApiError(409, "stock_changed", `${v.product.name} just sold out`);
+        }
+
+        const [createdRes] = await tx.insert(s.orders).values({
+          number: `TMP-${nanoid(12)}`,
+          accessToken: nanoid(32),
+          userId: req.user?.id ?? null,
+          status: "pending",
+          paymentMethod: "cod",
+          paymentStatus: "unpaid",
+          customerName: b.customer.name.trim(),
+          customerPhone: phone,
+          customerEmail: b.customer.email?.trim() || null,
+          city: b.address.city.trim(),
+          area: b.address.area?.trim() || null,
+          line1: b.address.line1.trim(),
+          postalCode: b.address.postalCode?.trim() || null,
+          notes: b.notes?.trim() || null,
+          subtotal,
+          discount: 0,
+          shipping,
+          codFee,
+          total,
+          source: "fast_cod",
+          openParcel: true,
+        });
+
+        const orderId = createdRes.insertId;
+        const orderNumber = `MG${100000 + orderId}`;
+
+        await tx.update(s.orders).set({ number: orderNumber }).where(eq(s.orders.id, orderId));
+
+        await tx.insert(s.orderItems).values({
+          orderId,
+          variantId: v.variant.id,
+          productId: v.product.id,
+          productSlug: v.product.slug,
+          productName: v.product.name,
+          modelName: v.model?.name || "",
+          colorName: v.color.name,
+          colorHex: v.color.hex,
+          sku: v.variant.sku,
+          unitPrice,
+          qty,
+          lineTotal: subtotal,
+          category: "magsafe-cases",
+          material: v.product.material,
+          custom: b.custom || null,
+        });
+
+        await tx.insert(s.orderEvents).values({
+          orderId,
+          status: "pending",
+          note: "Order placed via 1-Click Fast COD",
+        });
+
+        await tx.insert(s.payments).values({
+          orderId,
+          provider: "cod",
+          amount: total,
+        });
+
+        await tx
+          .update(s.products)
+          .set({ soldCount: sql`${s.products.soldCount} + ${qty}` })
+          .where(eq(s.products.id, v.product.id));
+
+        return { id: orderId, number: orderNumber, total };
+      });
+
+      invalidate("catalog:product");
+      const full = await loadOrder(eq(s.orders.id, result.id));
+      reply.code(201);
+      return { data: { order: presentOrder(full!, true) } };
+    },
+  );
+
   /* Order detail — by guest access token or as the logged-in owner */
   app.get(
     "/orders/:number",
