@@ -32,7 +32,13 @@ async function bootstrap() {
       if (!fs.existsSync(d)) fs.mkdirSync(d, { recursive: true });
     });
 
-    // 1. Launch Fastify API service in the background if not active
+    // 1. Launch Fastify API service in the background
+    // If an older instance is running, signal it to exit so the freshly deployed code starts
+    try {
+      await fetch(`http://127.0.0.1:${apiPort}/internal/restart`, { method: "POST" });
+      await new Promise((r) => setTimeout(r, 700));
+    } catch {}
+
     let apiHealthy = false;
     try {
       const r = await fetch(`http://127.0.0.1:${apiPort}/health`);

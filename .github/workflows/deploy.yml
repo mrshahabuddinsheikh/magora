@@ -100,9 +100,7 @@ jobs:
             chmod -R 755 .
             chmod -R 777 apps/api/uploads apps/api/backups
             
-            echo "🔄 Gracefully restarting Fastify API & Phusion Passenger..."
-            # Terminate old background Fastify process so fresh code is loaded
-            fuser -k 4000/tcp 2>/dev/null || pkill -f "apps/api" 2>/dev/null || true
+            echo "🔄 Gracefully restarting Phusion Passenger..."
             touch tmp/restart.txt
             
             echo "✅ Deployment successful! Magora Store is LIVE."
