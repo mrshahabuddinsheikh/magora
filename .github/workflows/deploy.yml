@@ -78,6 +78,7 @@ jobs:
             fi
             
             echo "📦 Extracting release archive..."
+            rm -rf apps/web/.next
             tar -xzf magora-release.tar.gz
             rm -f magora-release.tar.gz
             
@@ -100,7 +101,10 @@ jobs:
             chmod -R 755 .
             chmod -R 777 apps/api/uploads apps/api/backups
             
-            echo "🔄 Gracefully restarting Phusion Passenger..."
+            echo "🔄 Gracefully restarting LiteSpeed / Passenger workers..."
             touch tmp/restart.txt
+            cloudlinux-selector restart --json --interpreter nodejs --app-root "$TARGET" 2>/dev/null || true
+            killall -9 lsnode 2>/dev/null || true
+            pkill -x lsnode 2>/dev/null || true
             
             echo "✅ Deployment successful! Magora Store is LIVE."

@@ -99,6 +99,18 @@ async function bootstrap() {
     await webApp.prepare();
 
     const server = http.createServer((req, res) => {
+      // Internal reload trigger for deployment updates
+      if (req.url?.startsWith("/api/internal/reload") || req.url === "/_reload") {
+        const urlObj = new URL(req.url, `http://${req.headers.host || "localhost"}`);
+        const secret = req.headers["x-revalidate-secret"] || urlObj.searchParams.get("secret");
+        if (secret === fallbackSecret) {
+          res.writeHead(200, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ reloaded: true, timestamp: Date.now() }));
+          console.log("🔄 Deployment reload triggered! Gracefully exiting worker so fresh Next.js code is loaded...");
+          setTimeout(() => process.exit(0), 100);
+          return;
+        }
+      }
       handle(req, res);
     });
 
