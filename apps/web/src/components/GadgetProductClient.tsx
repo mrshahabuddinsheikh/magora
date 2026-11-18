@@ -74,7 +74,7 @@ export function GadgetProductClient({ product: p, delivery }: { product: Product
 
   const addToBag = async (thenCheckout = false) => {
     if (!variant) return;
-    const ok = await add(variant.id, qty, { name: p.name, model: "", color: color.name, hex: color.hex });
+    const ok = await add(variant.id, qty, { name: p.name, model: "", color: color.name, hex: color.hex }, undefined, !thenCheckout);
     if (ok) {
       setAdded(true);
       triggerFlyToBag(null, {

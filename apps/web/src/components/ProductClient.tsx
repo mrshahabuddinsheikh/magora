@@ -249,7 +249,7 @@ export function ProductClient({ product: p, delivery }: { product: Product; deli
     if (engravingEnabled && engravingText.trim()) {
       custom = { ...custom, engravingText: engravingText.trim(), engravingFont };
     }
-    const ok = await add(variant.id, qty, { name: p.name, model: model.name, color: color.name, hex: color.hex }, custom);
+    const ok = await add(variant.id, qty, { name: p.name, model: model.name, color: color.name, hex: color.hex }, custom, !thenCheckout);
     if (ok) {
       setAdded(true);
       triggerFlyToBag(ctaRef.current, {

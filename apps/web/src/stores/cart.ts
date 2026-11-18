@@ -24,7 +24,7 @@ interface CartState {
   lastAdded: { name: string; model: string; color: string; hex: string } | null;
   load: () => Promise<void>;
   ensure: () => Promise<string>;
-  add: (variantId: number, qty: number, info?: CartState["lastAdded"], custom?: ItemCustom) => Promise<boolean>;
+  add: (variantId: number, qty: number, info?: CartState["lastAdded"], custom?: ItemCustom, openDrawer?: boolean) => Promise<boolean>;
   setQty: (itemId: number, qty: number) => Promise<void>;
   remove: (itemId: number) => Promise<void>;
   applyCoupon: (code: string) => Promise<string | null>;
@@ -60,7 +60,7 @@ export const useCart = create<CartState>((set, get) => ({
     return r.data.id;
   },
 
-  async add(variantId, qty, info, custom) {
+  async add(variantId, qty, info, custom, openDrawer = true) {
     set({ busy: true, error: null });
     try {
       let id = await get().ensure();
@@ -75,7 +75,13 @@ export const useCart = create<CartState>((set, get) => ({
           r = await api<{ data: Cart }>(`/carts/${id}/items`, { method: "POST", json: { variantId, qty, custom } });
         } else throw e;
       }
-      set({ cart: r.data, open: true, lastAdded: info ?? null });
+      set({ cart: r.data, lastAdded: info ?? null });
+      if (openDrawer) {
+        // Delay opening the side drawer so the 3D product-into-bag animation plays completely unobstructed
+        setTimeout(() => {
+          set({ open: true });
+        }, 1450);
+      }
       const line = r.data.items.find((i) => i.variantId === variantId);
       if (line) track("add_to_cart", { value: line.unitPrice * qty, items: [{ id: line.product.slug, name: line.product.name, price: line.unitPrice, qty }] });
       return true;
