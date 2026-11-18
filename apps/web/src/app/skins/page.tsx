@@ -3,6 +3,8 @@ import { Box, Brush, Banknote, ImagePlus, Layers, RotateCcw, Scissors, Smartphon
 import { PhoneSectionHome } from "@/components/home/PhoneSectionHome";
 import { CATEGORIES } from "@/lib/categories";
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "Phone Skins & Custom Photo Skins — iPhone, Samsung, Pixel",
   description: "Laser-cut vinyl skins for the back and sides of your phone — matte, carbon, marble, wood, metal or your own photo. See it in 3D, pay cash on delivery.",

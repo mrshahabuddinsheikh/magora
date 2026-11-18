@@ -25,6 +25,8 @@ const FAQ = [
   ["What if I ordered the wrong model?", "Exchange it within 7 days in its original packaging. Message us on WhatsApp and we’ll sort it out."],
 ];
 
+export const dynamic = "force-dynamic";
+
 export default async function Home() {
   const [heroData, featured, brands] = await Promise.all([
     Promise.all(HERO_SLUGS.map((s) => getProduct(s))),

@@ -23,6 +23,8 @@ const META: Record<string, Metadata> = {
   },
 };
 
+export const dynamic = "force-dynamic";
+
 export async function generateMetadata(props: PageProps<"/shop">): Promise<Metadata> {
   const sp = (await props.searchParams) as SP;
   return META[categoryOf(sp.category).slug] ?? META["magsafe-cases"];

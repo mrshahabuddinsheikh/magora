@@ -9,6 +9,8 @@ import { Cta, Faq, OtherShops, Quality, SectionTitle, Steps } from "@/components
 import { CATEGORIES } from "@/lib/categories";
 import { money } from "@/lib/format";
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "Gadgets — Earbuds, Smart Watches, Power Banks & Chargers",
   description: "Earbuds, smart watches, magnetic power banks, fast chargers, cables and handsfree — see them in 3D, 6-month warranty, cash on delivery across Pakistan.",

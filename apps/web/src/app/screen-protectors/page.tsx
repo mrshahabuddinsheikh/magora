@@ -3,6 +3,8 @@ import { Banknote, Box, Crosshair, Eye, Fingerprint, RotateCcw, ShieldCheck, Sma
 import { PhoneSectionHome } from "@/components/home/PhoneSectionHome";
 import { CATEGORIES } from "@/lib/categories";
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "Screen Protectors — 9H Tempered, Privacy & Matte Glass",
   description: "9H tempered glass, privacy and matte screen protectors plus camera lens guards for iPhone, Samsung and Pixel. Alignment frame included. Cash on delivery.",

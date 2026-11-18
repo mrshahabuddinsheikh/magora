@@ -12,16 +12,7 @@ import { Reviews } from "@/components/Reviews";
 import { ProductCard } from "@/components/ProductCard";
 import { SITE_URL } from "@/lib/config";
 
-/** Pre-render the best sellers at build; every other product renders once on first visit, then is cached. */
-export async function generateStaticParams() {
-  try {
-    const res = await getProducts({ limit: 30 });
-    const slugs = res?.data?.map((p) => ({ slug: p.slug })) ?? [];
-    return slugs.length ? slugs : [{ slug: "crystal-clear-magsafe-case" }];
-  } catch {
-    return [{ slug: "crystal-clear-magsafe-case" }];
-  }
-}
+export const dynamic = "force-dynamic";
 
 export async function generateMetadata(props: PageProps<"/product/[slug]">): Promise<Metadata> {
   const { slug } = await props.params;
