@@ -176,9 +176,10 @@ export function ProductClient({ product: p, delivery }: { product: Product; deli
     return match?.qty ?? 0;
   }, [cart?.items, variant?.id, p.slug, model.slug, color.id]);
 
-  const choose = (m: ProductModel) => {
-    setModel(m);
-    setPhone({ slug: m.slug, name: m.name, brand: m.brand.slug });
+  const choose = (m: ProductModel | { slug: string; name: string; brand: { slug: string; name: string }; id?: number }) => {
+    const found = p.models.find((x) => x.slug === m.slug || (m.id && x.id === m.id)) ?? (m as ProductModel);
+    setModel(found);
+    setPhone({ slug: found.slug, name: found.name, brand: found.brand.slug });
   };
 
   const pickPhoto = (file?: File | null) => {
@@ -262,7 +263,7 @@ export function ProductClient({ product: p, delivery }: { product: Product; deli
                 </button>
               ) : (
                 <LazyViewer
-                  key={p.material}
+                  key={`${p.material}-${model.slug}`}
                   spec={model.spec}
                   brand={model.brand.slug}
                   material={p.material}

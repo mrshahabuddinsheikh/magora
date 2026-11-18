@@ -22,18 +22,24 @@ export function ModelPicker({ models, value, onChange }: { models: M[]; value?: 
     return [...seen].map(([slug, name]) => ({ slug, name }));
   }, [models]);
 
-  const selected = models.find((m) => m.slug === value);
-  const [brand, setBrand] = useState(selected?.brand.slug ?? brands[0]?.slug);
+  const selected = useMemo(() => {
+    if (!value) return models[0];
+    const v = value.toLowerCase().trim();
+    return models.find((m) => m.slug.toLowerCase() === v || m.name.toLowerCase() === v) ?? models[0];
+  }, [models, value]);
+
+  const [brand, setBrand] = useState(selected?.brand?.slug ?? brands[0]?.slug ?? "apple");
   const [modalOpen, setModalOpen] = useState(false);
   const [q, setQ] = useState("");
   const [hits, setHits] = useState<M[]>([]);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
+  // Sync brand with selected phone when modal opens or selected model changes
   useEffect(() => {
-    if (selected && selected.brand.slug !== brand) {
+    if (selected?.brand?.slug) {
       setBrand(selected.brand.slug);
     }
-  }, [selected, brand]);
+  }, [selected?.slug, modalOpen]);
 
   // Focus search input when modal opens
   useEffect(() => {
@@ -92,12 +98,20 @@ export function ModelPicker({ models, value, onChange }: { models: M[]; value?: 
 
   // Top 4 quick popular models for the selected brand
   const quickPills = useMemo(() => {
-    const brandList = models.filter((m) => m.brand.slug === (selected?.brand.slug ?? brand));
-    // Prioritize popular ones or first 4
+    const activeBrand = selected?.brand?.slug ?? brand;
+    const brandList = models.filter((m) => m.brand.slug === activeBrand);
     const popular = brandList.filter((m) => m.popular);
     const combined = [...popular, ...brandList.filter((m) => !m.popular)];
-    return combined.slice(0, 4);
-  }, [models, selected?.brand.slug, brand]);
+    const top = combined.slice(0, 4);
+    if (selected && brandList.some((m) => m.slug === selected.slug) && !top.some((m) => m.slug === selected.slug)) {
+      if (top.length >= 4) {
+        top[top.length - 1] = selected;
+      } else {
+        top.push(selected);
+      }
+    }
+    return top;
+  }, [models, selected, brand]);
 
   return (
     <div className="space-y-2">
@@ -218,7 +232,12 @@ export function ModelPicker({ models, value, onChange }: { models: M[]; value?: 
                   <button
                     key={b.slug}
                     type="button"
-                    onClick={() => setBrand(b.slug)}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setBrand(b.slug);
+                      setQ("");
+                    }}
                     className={cn(
                       "h-8 whitespace-nowrap rounded-full px-3 text-xs font-semibold transition shrink-0",
                       brand === b.slug
@@ -248,7 +267,11 @@ export function ModelPicker({ models, value, onChange }: { models: M[]; value?: 
                           <button
                             key={m.id}
                             type="button"
-                            onClick={() => pick(m)}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              pick(m);
+                            }}
                             className={cn(
                               "relative flex flex-col items-center justify-center rounded-2xl border p-3 text-center text-xs font-semibold transition min-h-[58px]",
                               on
@@ -298,7 +321,11 @@ export function ModelPicker({ models, value, onChange }: { models: M[]; value?: 
                       <button
                         key={m.id}
                         type="button"
-                        onClick={() => pick(m)}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          pick(m);
+                        }}
                         className={cn(
                           "relative flex items-center justify-center rounded-2xl border px-3 py-3 text-center text-[13px] font-semibold transition min-h-[52px]",
                           on

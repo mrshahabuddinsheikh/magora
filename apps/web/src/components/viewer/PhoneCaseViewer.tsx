@@ -508,11 +508,20 @@ function CameraRig({ view, nonce, controls }: { view: ViewAngle; nonce: number; 
   return null;
 }
 
+function Invalidator(props: ViewerProps) {
+  const { invalidate } = useThree();
+  useEffect(() => {
+    invalidate();
+  }, [props.spec, props.color, props.material, props.accent, props.coverage, props.design, props.brand, invalidate]);
+  return null;
+}
+
 function Scene(props: ViewerProps & { spin: boolean; onStart: () => void; onEnd: () => void }) {
   const controls = useRef<OrbitControlsImpl | null>(null);
   const floorY = 0.1 - (props.spec.heightMm / 2) * S - 0.012;
   return (
     <>
+      <Invalidator {...props} />
       <group scale={S} rotation={[0, -0.35, 0]} position={[0, 0.1, 0]}>
         <Phone spec={props.spec} brand={props.brand} />
         {viewModeOf(props.material) === "case" && <Case {...props} />}
@@ -584,8 +593,8 @@ export default function PhoneCaseViewer(props: ViewerProps) {
     cool.current = setTimeout(() => setHot(false), ms);
   };
   useEffect(() => {
-    queueMicrotask(() => keepAlive(1800)); // camera glides to a new view
-  }, [props.view, props.viewNonce]);
+    queueMicrotask(() => keepAlive(1800)); // camera glides to a new view or updates on model/spec/color change
+  }, [props.view, props.viewNonce, props.spec, props.color, props.material, props.brand]);
   useEffect(() => () => void (cool.current && clearTimeout(cool.current)), []);
 
   return (
