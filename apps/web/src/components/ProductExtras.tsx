@@ -218,7 +218,7 @@ export function BoughtTogether({
 }) {
   const add = useCart((s) => s.add);
   const busy = useCart((s) => s.busy);
-  const cartItems = useCart((s) => s.cart?.items ?? []);
+  const cart = useCart((s) => s.cart);
   const [picks, setPicks] = useState<Pick[]>([]);
   const [off, setOff] = useState<Set<number>>(new Set());
   const [done, setDone] = useState(false);
@@ -228,7 +228,7 @@ export function BoughtTogether({
   useEffect(() => {
     if (!BUNDLE_SECTIONS.includes(section)) return;
     let alive = true;
-    queueMicrotask(() => setDone(false));
+    setDone(false);
     (async () => {
       try {
         const list = await api<Paged<ProductListItem>>(`/products?category=${others.join(",")}&model=${model.slug}&limit=12`, { auth: false });
@@ -259,11 +259,11 @@ export function BoughtTogether({
   const save = chosen.length ? Math.round((sum * BUNDLE_PCT) / 100) : 0;
 
   const isBundleInCart = useMemo(() => {
-    if (!chosen.length) return false;
-    const currentIn = current.variantId ? cartItems.some((i) => i.variantId === current.variantId) : true;
-    const allExtrasIn = chosen.every((x) => cartItems.some((i) => i.variantId === x.variantId));
+    if (!chosen.length || !cart?.items?.length) return false;
+    const currentIn = current.variantId ? cart.items.some((i) => i.variantId === current.variantId) : true;
+    const allExtrasIn = chosen.every((x) => cart.items.some((i) => i.variantId === x.variantId));
     return currentIn && allExtrasIn;
-  }, [chosen, cartItems, current.variantId]);
+  }, [chosen, cart?.items, current.variantId]);
 
   const addAll = async () => {
     if (current.needsPhoto || !current.variantId) {
@@ -356,7 +356,7 @@ export function RecentlyViewed({ current }: { current?: string }) {
   const key = show.join(",");
   useEffect(() => {
     if (!ready || !key) {
-      queueMicrotask(() => setItems([]));
+      setItems([]);
       return;
     }
     let alive = true;

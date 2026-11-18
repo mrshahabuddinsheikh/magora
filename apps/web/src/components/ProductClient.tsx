@@ -37,7 +37,7 @@ export function ProductClient({ product: p, delivery }: { product: Product; deli
   const add = useCart((s) => s.add);
   const busy = useCart((s) => s.busy);
   const cartError = useCart((s) => s.error);
-  const cartItems = useCart((s) => s.cart?.items ?? []);
+  const cart = useCart((s) => s.cart);
   const router = useRouter();
 
   const [model, setModel] = useState<ProductModel>(() => p.models.find((m) => m.popular) ?? p.models[0]);
@@ -96,18 +96,18 @@ export function ProductClient({ product: p, delivery }: { product: Product; deli
       }
 
       // Determine model to select:
-      // 1. If savedPhone matches this product, prioritize it
-      // 2. Else if urlModelSlug matches this product, use it
+      // 1. If urlModelSlug matches this product, use it (URL is explicit)
+      // 2. Else if savedPhone matches this product, use it
       // 3. Else if matchedDetected, use it on mobile
       // 4. Fallback to initial default
       let chosen: ProductModel | undefined;
-      if (savedPhone?.slug) {
+      if (urlModelSlug) {
+        chosen = p.models.find((x) => x.slug === urlModelSlug);
+      }
+      if (!chosen && savedPhone?.slug) {
         chosen = p.models.find(
           (x) => x.slug === savedPhone.slug || x.name.toLowerCase() === savedPhone.name.toLowerCase(),
         );
-      }
-      if (!chosen && urlModelSlug) {
-        chosen = p.models.find((x) => x.slug === urlModelSlug);
       }
       if (!chosen && matchedDetected) {
         chosen = matchedDetected;
@@ -159,8 +159,22 @@ export function ProductClient({ product: p, delivery }: { product: Product; deli
   const off = pctOff(price, compare);
   const stock = variant?.stock ?? 0;
   const soldOut = !variant || stock <= 0;
-  const inCart = useMemo(() => cartItems.some((i) => i.variantId === variant?.id), [cartItems, variant?.id]);
-  const inCartQty = useMemo(() => cartItems.find((i) => i.variantId === variant?.id)?.qty ?? 0, [cartItems, variant?.id]);
+  const inCart = useMemo(() => {
+    if (!cart?.items?.length) return false;
+    return cart.items.some((i) =>
+      (variant?.id && i.variantId === variant.id) ||
+      (i.product.slug === p.slug && i.model?.slug === model.slug && i.color?.id === color.id)
+    );
+  }, [cart?.items, variant?.id, p.slug, model.slug, color.id]);
+
+  const inCartQty = useMemo(() => {
+    if (!cart?.items?.length) return 0;
+    const match = cart.items.find((i) =>
+      (variant?.id && i.variantId === variant.id) ||
+      (i.product.slug === p.slug && i.model?.slug === model.slug && i.color?.id === color.id)
+    );
+    return match?.qty ?? 0;
+  }, [cart?.items, variant?.id, p.slug, model.slug, color.id]);
 
   const choose = (m: ProductModel) => {
     setModel(m);

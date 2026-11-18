@@ -30,10 +30,10 @@ export function ModelPicker({ models, value, onChange }: { models: M[]; value?: 
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (selected) {
-      queueMicrotask(() => setBrand(selected.brand.slug));
+    if (selected && selected.brand.slug !== brand) {
+      setBrand(selected.brand.slug);
     }
-  }, [selected]);
+  }, [selected, brand]);
 
   // Focus search input when modal opens
   useEffect(() => {
@@ -51,7 +51,7 @@ export function ModelPicker({ models, value, onChange }: { models: M[]; value?: 
   useEffect(() => {
     const nq = norm(q);
     if (!nq) {
-      queueMicrotask(() => setHits([]));
+      setHits([]);
       return;
     }
     const local = models.filter(
