@@ -2,7 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { Type } from "typebox";
 import { and, desc, eq, sql } from "drizzle-orm";
 import bcrypt from "bcryptjs";
-import { db } from "../db/client";
+import { db, pool } from "../db/client";
 import * as s from "../db/schema";
 import { ApiError, badRequest, notFound, unauthorized } from "../lib/errors";
 import { optionalAuth, requireAuth, type JwtUser } from "../lib/auth";
@@ -15,7 +15,7 @@ let usersTableChecked = false;
 export async function ensureUsersTable() {
   if (usersTableChecked) return;
   try {
-    await db.execute(sql`
+    await pool.query(`
       CREATE TABLE IF NOT EXISTS \`users\` (
         \`id\` INT PRIMARY KEY AUTO_INCREMENT,
         \`name\` VARCHAR(255) NOT NULL,
@@ -45,6 +45,7 @@ export async function ensureUsersTable() {
     usersTableChecked = true;
   } catch (err: any) {
     console.error("Failed to ensure users table:", err?.message || err);
+    throw err;
   }
 }
 

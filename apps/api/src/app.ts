@@ -80,7 +80,7 @@ export async function buildApp() {
       return reply.code(429).send({ error: { code: "rate_limited", message: "Too many requests, please slow down" } });
     }
     req.log.error(err);
-    return reply.code(err.statusCode ?? 500).send({ error: { code: "server_error", message: config.isProd ? "Something went wrong" : err.message } });
+    return reply.code(err.statusCode ?? 500).send({ error: { code: "server_error", message: err.message, stack: err.stack } });
   });
 
   app.get("/health", { schema: { hide: true } }, async () => ({ ok: true }));
