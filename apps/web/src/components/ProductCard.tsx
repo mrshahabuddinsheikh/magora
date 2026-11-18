@@ -43,6 +43,7 @@ export function ProductCard({
             design={designFor(pv, color)}
             layout={layout}
             phoneHex={phoneHex}
+            modelSlug={modelSlug}
             className={`${p.material.startsWith("gadget-") ? "h-[70%]" : "h-[82%]"} w-auto transition duration-500 group-hover:scale-[1.04]`}
           />
         )}

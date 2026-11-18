@@ -1,5 +1,6 @@
 import { useId } from "react";
-import type { CamLayout, Material } from "@/lib/types";
+import type { CameraSpec, CamLayout, Material } from "@/lib/types";
+import { resolveCameraStyle, type ResolvedCameraStyle } from "@/lib/layout";
 import { GadgetThumb } from "./GadgetThumb";
 
 /**
@@ -21,12 +22,169 @@ function DesignArt({ id, design }: { id: string; design: ThumbDesign }) {
   );
 }
 
+/** Precision camera island SVG elements according to phone model */
+function CaseCamera({
+  style,
+  clear,
+  phoneHex,
+  accent,
+}: {
+  style: ResolvedCameraStyle;
+  clear: boolean;
+  phoneHex: string;
+  accent?: string | null;
+}) {
+  const bg = clear ? phoneHex : "#1a1b1f";
+  const lens = (cx: number, cy: number, r = 9.5) => (
+    <g key={`${cx}-${cy}`}>
+      <circle cx={cx} cy={cy} r={r} fill="#2b2d33" />
+      <circle cx={cx} cy={cy} r={r * 0.7} fill="#07080c" />
+      <circle cx={cx - 2} cy={cy - 2} r={r * 0.22} fill="#6c7ab8" opacity="0.75" />
+    </g>
+  );
+
+  switch (style) {
+    case "iphone-air":
+      return (
+        <g>
+          {/* Horizontal slim island across the upper area (iPhone Air signature) */}
+          <rect x="12" y="14" width="96" height="26" rx="13" fill={bg} stroke="rgba(0,0,0,0.22)" strokeWidth="1.5" />
+          {/* Single prominent camera lens */}
+          {lens(28, 27, 9.5)}
+          {/* Flash & sensor */}
+          <circle cx="50" cy="27" r="3.8" fill="#f3ead2" />
+          <circle cx="62" cy="27" r="1.8" fill="#3a3d45" />
+        </g>
+      );
+
+    case "iphone-pill":
+      return (
+        <g>
+          {/* Modern vertical dual-lens pill (iPhone 16, 17) */}
+          <rect x="15" y="14" width="28" height="52" rx="14" fill={bg} stroke="rgba(0,0,0,0.2)" strokeWidth="1.5" />
+          {lens(29, 27, 9)}
+          {lens(29, 53, 9)}
+          <circle cx="52" cy="40" r="4.2" fill="#f3ead2" stroke="rgba(0,0,0,0.2)" strokeWidth="1" />
+        </g>
+      );
+
+    case "iphone-diagonal":
+      return (
+        <g>
+          {/* Square diagonal dual-camera island (iPhone 13, 14, 15) */}
+          <rect x="14" y="13" width="46" height="46" rx="14" fill={bg} stroke="rgba(0,0,0,0.2)" strokeWidth="1.5" />
+          {lens(27, 26, 9.2)}
+          {lens(47, 46, 9.2)}
+          <circle cx="47" cy="26" r="3.8" fill="#f3ead2" />
+          <circle cx="27" cy="46" r="1.8" fill="#3a3d45" />
+        </g>
+      );
+
+    case "iphone-pro-bar":
+      return (
+        <g>
+          {/* Horizontal Pro Bar (iPhone 17 Pro, 18 Pro) */}
+          <rect x="12" y="11" width="96" height="44" rx="15" fill={bg} stroke="rgba(0,0,0,0.2)" strokeWidth="1.5" />
+          {[26, 48, 70].map((cx) => lens(cx, 33, 9.2))}
+          <circle cx="92" cy="24" r="3.8" fill="#f3ead2" />
+          <circle cx="92" cy="40" r="2.8" fill="#07080c" stroke="#333" strokeWidth="0.8" />
+        </g>
+      );
+
+    case "iphone-pro":
+      return (
+        <g>
+          {/* Classic Apple Pro triangle (iPhone 14/15/16 Pro) */}
+          <rect x="14" y="13" width="56" height="56" rx="16" fill={bg} stroke="rgba(0,0,0,0.2)" strokeWidth="2" />
+          {[[30, 29], [30, 53], [52, 41]].map(([cx, cy]) => lens(cx, cy, 10))}
+          <circle cx="52" cy="24" r="4" fill="#f3ead2" />
+          <circle cx="52" cy="57" r="3" fill="#07080c" stroke="#333" strokeWidth="0.8" />
+        </g>
+      );
+
+    case "galaxy-ultra":
+      return (
+        <g>
+          {/* Samsung Ultra iconic 4 floating camera rings */}
+          {[25, 47, 69].map((cy) => (
+            <g key={cy}>
+              <circle cx="26" cy={cy} r="10.5" fill={accent ?? "#2b2d33"} stroke="rgba(0,0,0,0.3)" strokeWidth="1.5" />
+              <circle cx="26" cy={cy} r="7.2" fill="#07080c" />
+              <circle cx="24" cy={cy - 2} r="2" fill="#6c7ab8" opacity="0.7" />
+            </g>
+          ))}
+          <circle cx="47" cy="25" r="7.5" fill={accent ?? "#2b2d33"} stroke="rgba(0,0,0,0.25)" strokeWidth="1.2" />
+          <circle cx="47" cy="25" r="5" fill="#07080c" />
+          <circle cx="47" cy="37" r="3.2" fill="#f3ead2" />
+          <circle cx="47" cy="48" r="5.5" fill="#07080c" stroke="#333" strokeWidth="0.8" />
+        </g>
+      );
+
+    case "galaxy-base":
+      return (
+        <g>
+          {/* Samsung Base / Plus 3 floating rings */}
+          {[26, 47, 68].map((cy) => (
+            <g key={cy}>
+              <circle cx="27" cy={cy} r="9.5" fill={accent ?? "#2b2d33"} stroke="rgba(0,0,0,0.25)" strokeWidth="1.5" />
+              <circle cx="27" cy={cy} r="6.4" fill="#07080c" />
+              <circle cx="25" cy={cy - 2} r="1.8" fill="#6c7ab8" opacity="0.7" />
+            </g>
+          ))}
+          <circle cx="45" cy="26" r="3.5" fill="#f3ead2" />
+        </g>
+      );
+
+    case "pixel-visor":
+      return (
+        <g>
+          {/* Google Pixel Visor */}
+          <rect x="12" y="30" width="96" height="30" rx="15" fill={bg} stroke="rgba(0,0,0,0.22)" strokeWidth="1.5" />
+          <rect x="18" y="36" width="56" height="18" rx="9" fill="#07080c" />
+          {[28, 45, 62].map((cx) => lens(cx, 45, 7))}
+          <circle cx="88" cy="45" r="3.5" fill="#f3ead2" />
+        </g>
+      );
+
+    case "circle":
+      return (
+        <g>
+          {/* Centered big circular island (Vivo X, Oppo Find Ultra, Xiaomi Ultra) */}
+          <circle cx="60" cy="52" r="37" fill={bg} stroke="#d7d9de" strokeWidth="2.5" />
+          {[[47, 39], [73, 39], [47, 65], [73, 65]].map(([cx, cy]) => lens(cx, cy, 9.5))}
+        </g>
+      );
+
+    case "circle-left":
+      return (
+        <g>
+          {/* Left-anchored circle (OnePlus 12, 13) */}
+          <circle cx="41" cy="41" r="28" fill={bg} stroke="#d7d9de" strokeWidth="2" />
+          {[[41, 29], [30, 48], [52, 48]].map(([cx, cy]) => lens(cx, cy, 8.5))}
+          <circle cx="80" cy="24" r="3.6" fill="#f3ead2" />
+        </g>
+      );
+
+    case "squircle":
+    default:
+      return (
+        <g>
+          <rect x="14" y="13" width="50" height="50" rx="14" fill={bg} stroke="rgba(0,0,0,0.2)" strokeWidth="1.5" />
+          {[[28, 27], [49, 27], [28, 48]].map(([cx, cy]) => lens(cx, cy, 8.5))}
+          <circle cx="49" cy="48" r="3.6" fill="#f3ead2" />
+        </g>
+      );
+  }
+}
+
 export function CaseThumb({
   material,
   color,
   accent,
   phoneHex = "#c9ccd2",
   layout = "bar",
+  modelSlug,
+  camera,
   className,
   design,
 }: {
@@ -35,6 +193,8 @@ export function CaseThumb({
   accent?: string | null;
   phoneHex?: string;
   layout?: CamLayout;
+  modelSlug?: string;
+  camera?: CameraSpec;
   className?: string;
   design?: ThumbDesign | null;
 }) {
@@ -42,6 +202,7 @@ export function CaseThumb({
   const clear = material === "clear";
   const fill = clear ? phoneHex : color;
   const ring = clear ? "#eef0f3" : material === "frosted" ? "rgba(255,255,255,0.45)" : "rgba(0,0,0,0.14)";
+  const cameraStyle = resolveCameraStyle(modelSlug, layout, camera);
 
   return (
     <svg viewBox="0 0 120 230" className={className} role="img" aria-label="Case preview">
@@ -74,71 +235,8 @@ export function CaseThumb({
         {design && <DesignArt id={id} design={design} />}
         <rect x="8.75" y="6.75" width="102.5" height="216.5" rx="21.5" fill="none" stroke={clear ? "rgba(255,255,255,0.9)" : "rgba(0,0,0,0.12)"} strokeWidth="1.5" />
 
-        {/* camera */}
-        {layout === "bar" && (
-          <g>
-            <rect x="12" y="11" width="96" height="56" rx="16" fill="rgba(0,0,0,0.18)" />
-            <rect x="13.5" y="12.5" width="93" height="53" rx="15" fill={clear ? phoneHex : "#1a1b1f"} opacity={clear ? 1 : 0.9} />
-          </g>
-        )}
-        {layout === "plateau" && <rect x="14" y="13" width="56" height="56" rx="16" fill={clear ? phoneHex : "#1a1b1f"} stroke="rgba(0,0,0,0.2)" strokeWidth="2" />}
-        {(layout === "bar" || layout === "plateau") &&
-          [
-            [30, 29],
-            [30, 53],
-            [52, 41],
-          ].map(([cx, cy], i) => (
-            <g key={i}>
-              <circle cx={cx} cy={cy} r="10" fill="#2b2d33" />
-              <circle cx={cx} cy={cy} r="7" fill="#07080c" />
-              <circle cx={cx - 2} cy={cy - 2} r="2" fill="#6c7ab8" opacity="0.7" />
-            </g>
-          ))}
-        {layout === "floating" &&
-          [24, 44, 64].map((cy, i) => (
-            <g key={i}>
-              <circle cx="27" cy={cy} r="9.5" fill={accent ?? "#2b2d33"} stroke="rgba(0,0,0,0.25)" strokeWidth="1.5" />
-              <circle cx="27" cy={cy} r="6" fill="#07080c" />
-            </g>
-          ))}
-        {layout === "bar" && <circle cx="92" cy="29" r="4" fill="#f3ead2" />}
-        {layout === "visor" && (
-          <g>
-            <rect x="12" y="30" width="96" height="30" rx="15" fill={clear ? phoneHex : "#1a1b1f"} stroke="rgba(0,0,0,0.22)" strokeWidth="1.5" />
-            {[30, 48, 66].map((cx, i) => (
-              <g key={i}>
-                <circle cx={cx} cy="45" r="8" fill="#2b2d33" />
-                <circle cx={cx} cy="45" r="5.4" fill="#07080c" />
-                <circle cx={cx - 1.6} cy="43.4" r="1.6" fill="#6c7ab8" opacity="0.7" />
-              </g>
-            ))}
-            <circle cx="88" cy="45" r="3.4" fill="#f3ead2" />
-          </g>
-        )}
-        {layout === "circle" && (
-          <g>
-            <circle cx="60" cy="52" r="37" fill={clear ? phoneHex : "#1a1b1f"} stroke="#d7d9de" strokeWidth="2.5" />
-            {[[47, 39], [73, 39], [47, 65], [73, 65]].map(([cx, cy], i) => (
-              <g key={i}>
-                <circle cx={cx} cy={cy} r="9.5" fill="#2b2d33" />
-                <circle cx={cx} cy={cy} r="6.5" fill="#07080c" />
-                <circle cx={cx - 2} cy={cy - 2} r="2" fill="#6c7ab8" opacity="0.7" />
-              </g>
-            ))}
-          </g>
-        )}
-        {layout === "circle-left" && (
-          <g>
-            <circle cx="41" cy="41" r="28" fill={clear ? phoneHex : "#1a1b1f"} stroke="#d7d9de" strokeWidth="2" />
-            {[[41, 29], [30, 48], [52, 48]].map(([cx, cy], i) => (
-              <g key={i}>
-                <circle cx={cx} cy={cy} r="8.5" fill="#2b2d33" />
-                <circle cx={cx} cy={cy} r="5.8" fill="#07080c" />
-              </g>
-            ))}
-            <circle cx="80" cy="24" r="3.6" fill="#f3ead2" />
-          </g>
-        )}
+        {/* precision phone camera according to selected model */}
+        <CaseCamera style={cameraStyle} clear={clear} phoneHex={phoneHex} accent={accent} />
 
         {/* MagSafe ring */}
         {material !== "carbon" && (
@@ -153,9 +251,167 @@ export function CaseThumb({
   );
 }
 
+/** The hole in a skin where the phone's own camera shows through, shaped like that phone's camera */
+function SkinCutout({
+  style,
+  phoneHex,
+  accent,
+}: {
+  style: ResolvedCameraStyle;
+  phoneHex: string;
+  accent?: string | null;
+}) {
+  const lens = (cx: number, cy: number, r = 9.5) => (
+    <g key={`${cx}-${cy}`}>
+      <circle cx={cx} cy={cy} r={r} fill="#2b2d33" />
+      <circle cx={cx} cy={cy} r={r * 0.68} fill="#07080c" />
+    </g>
+  );
+  const edge = { fill: phoneHex, stroke: "rgba(0,0,0,0.25)" };
+
+  switch (style) {
+    case "iphone-air":
+      return (
+        <g>
+          <rect x="12" y="14" width="96" height="26" rx="13" {...edge} />
+          {lens(28, 27, 9.5)}
+          <circle cx="50" cy="27" r="3.8" fill="#f3ead2" />
+          <circle cx="62" cy="27" r="1.8" fill="#3a3d45" />
+        </g>
+      );
+
+    case "iphone-pill":
+      return (
+        <g>
+          <rect x="15" y="14" width="28" height="52" rx="14" {...edge} />
+          {lens(29, 27, 9)}
+          {lens(29, 53, 9)}
+          <circle cx="52" cy="40" r="4.2" fill="#f3ead2" />
+        </g>
+      );
+
+    case "iphone-diagonal":
+      return (
+        <g>
+          <rect x="14" y="13" width="46" height="46" rx="14" {...edge} />
+          {lens(27, 26, 9.2)}
+          {lens(47, 46, 9.2)}
+          <circle cx="47" cy="26" r="3.8" fill="#f3ead2" />
+        </g>
+      );
+
+    case "iphone-pro-bar":
+      return (
+        <g>
+          <rect x="12" y="11" width="96" height="44" rx="15" {...edge} />
+          {[26, 48, 70].map((cx) => lens(cx, 33, 9.2))}
+          <circle cx="92" cy="24" r="3.8" fill="#f3ead2" />
+        </g>
+      );
+
+    case "iphone-pro":
+      return (
+        <g>
+          <rect x="14" y="13" width="56" height="56" rx="16" {...edge} />
+          {lens(30, 29, 10)}
+          {lens(30, 53, 10)}
+          {lens(52, 41, 10)}
+          <circle cx="52" cy="24" r="4" fill="#f3ead2" />
+        </g>
+      );
+
+    case "galaxy-ultra":
+      return (
+        <g>
+          {[25, 47, 69].map((cy) => (
+            <g key={cy}>
+              <circle cx="26" cy={cy} r="11" {...edge} />
+              {lens(26, cy, 8.8)}
+            </g>
+          ))}
+          <circle cx="47" cy="25" r="8" {...edge} />
+          {lens(47, 25, 6)}
+          <circle cx="47" cy="37" r="3.5" fill="#f3ead2" />
+          <circle cx="47" cy="48" r="6" {...edge} />
+        </g>
+      );
+
+    case "galaxy-base":
+      return (
+        <g>
+          {[26, 47, 68].map((cy) => (
+            <g key={cy}>
+              <circle cx="27" cy={cy} r="10.5" {...edge} />
+              {lens(27, cy, 8.5)}
+            </g>
+          ))}
+          <circle cx="45" cy="26" r="3.5" fill="#f3ead2" />
+        </g>
+      );
+
+    case "pixel-visor":
+      return (
+        <g>
+          <rect x="12" y="30" width="96" height="30" rx="15" {...edge} />
+          <rect x="18" y="36" width="56" height="18" rx="9" fill="#07080c" />
+          {[28, 45, 62].map((cx) => lens(cx, 45, 7))}
+          <circle cx="88" cy="45" r="3.5" fill="#f3ead2" />
+        </g>
+      );
+
+    case "circle":
+      return (
+        <g>
+          <circle cx="60" cy="52" r="36" {...edge} />
+          {[[47, 39], [73, 39], [47, 65], [73, 65]].map(([cx, cy]) => lens(cx, cy, 9))}
+        </g>
+      );
+
+    case "circle-left":
+      return (
+        <g>
+          <circle cx="41" cy="41" r="28" {...edge} />
+          {[[41, 29], [30, 48], [52, 48]].map(([cx, cy]) => lens(cx, cy, 8.5))}
+        </g>
+      );
+
+    case "squircle":
+    default:
+      return (
+        <g>
+          <rect x="14" y="13" width="50" height="50" rx="14" {...edge} />
+          {[[28, 27], [49, 27], [28, 48]].map(([cx, cy]) => lens(cx, cy, 8.5))}
+        </g>
+      );
+  }
+}
+
 /** Phone back wrapped in a skin (pattern / photo), camera left uncovered. */
-export function SkinThumb({ material, color, accent, imageUrl: photo, className, design, layout = "plateau", phoneHex = "#c9ccd2" }: { material: string; color: string; accent?: string | null; imageUrl?: string | null; className?: string; design?: ThumbDesign | null; layout?: CamLayout; phoneHex?: string }) {
+export function SkinThumb({
+  material,
+  color,
+  accent,
+  imageUrl: photo,
+  className,
+  design,
+  layout = "plateau",
+  modelSlug,
+  camera,
+  phoneHex = "#c9ccd2",
+}: {
+  material: string;
+  color: string;
+  accent?: string | null;
+  imageUrl?: string | null;
+  className?: string;
+  design?: ThumbDesign | null;
+  layout?: CamLayout;
+  modelSlug?: string;
+  camera?: CameraSpec;
+  phoneHex?: string;
+}) {
   const id = useId().replace(/:/g, "");
+  const cameraStyle = resolveCameraStyle(modelSlug, layout, camera);
   // a printed design on a regular skin fills the back like a photo
   const imageUrl = photo ?? (design && material !== "skin-custom" ? design.url : null);
   const fill =
@@ -166,6 +422,7 @@ export function SkinThumb({ material, color, accent, imageUrl: photo, className,
     : material === "skin-wood" ? `url(#wd${id})`
     : material === "skin-metal" ? `url(#mt${id})`
     : color;
+
   return (
     <svg viewBox="0 0 120 230" className={className} role="img" aria-label="Skin preview">
       <defs>
@@ -189,33 +446,11 @@ export function SkinThumb({ material, color, accent, imageUrl: photo, className,
           </g>
         )}
         {/* camera cut-out showing the phone */}
-        <SkinCutout layout={layout} phoneHex={phoneHex} />
+        <SkinCutout style={cameraStyle} phoneHex={phoneHex} accent={accent} />
         <rect x="10" y="8" width="100" height="214" rx="20" fill={`url(#sh${id})`} clipPath={`url(#clip${id})`} />
       </g>
     </svg>
   );
-}
-
-/** The hole in a skin where the phone's own camera shows through, shaped like that phone's camera */
-function SkinCutout({ layout, phoneHex }: { layout: CamLayout; phoneHex: string }) {
-  const lens = (cx: number, cy: number, r = 9.5) => (
-    <g key={`${cx}-${cy}`}><circle cx={cx} cy={cy} r={r} fill="#2b2d33" /><circle cx={cx} cy={cy} r={r * 0.68} fill="#07080c" /></g>
-  );
-  const edge = { fill: phoneHex, stroke: "rgba(0,0,0,0.25)" };
-  switch (layout) {
-    case "bar":
-      return <g><rect x="13" y="11" width="94" height="54" rx="15" {...edge} />{lens(30, 27)}{lens(30, 50)}{lens(52, 38)}<circle cx="90" cy="27" r="3.6" fill="#f3ead2" /></g>;
-    case "visor":
-      return <g><rect x="12" y="30" width="96" height="30" rx="15" {...edge} />{lens(30, 45, 8)}{lens(48, 45, 8)}{lens(66, 45, 8)}<circle cx="88" cy="45" r="3.4" fill="#f3ead2" /></g>;
-    case "circle":
-      return <g><circle cx="60" cy="52" r="36" {...edge} />{lens(47, 39, 9)}{lens(73, 39, 9)}{lens(47, 65, 9)}{lens(73, 65, 9)}</g>;
-    case "circle-left":
-      return <g><circle cx="41" cy="41" r="28" {...edge} />{lens(41, 29, 8.5)}{lens(30, 48, 8.5)}{lens(52, 48, 8.5)}</g>;
-    case "floating":
-      return <g>{[24, 44, 64].map((cy) => <g key={cy}><circle cx="27" cy={cy} r="10.5" {...edge} />{lens(27, cy, 8.5)}</g>)}</g>;
-    default:
-      return <g><rect x="14" y="12" width="56" height="56" rx="15" {...edge} />{lens(30, 28)}{lens(30, 52)}{lens(52, 40)}</g>;
-  }
 }
 
 /** Phone front with a glass protector (or the camera with lens guards). */
@@ -250,7 +485,18 @@ export function ProtectorThumb({ material, color, className }: { material: strin
 }
 
 /** Picks the right thumbnail for any product */
-export function ProductThumb(p: { material: string; color: string; accent?: string | null; imageUrl?: string | null; phoneHex?: string; layout?: CamLayout; className?: string; design?: ThumbDesign | null }) {
+export function ProductThumb(p: {
+  material: string;
+  color: string;
+  accent?: string | null;
+  imageUrl?: string | null;
+  phoneHex?: string;
+  layout?: CamLayout;
+  modelSlug?: string;
+  camera?: CameraSpec;
+  className?: string;
+  design?: ThumbDesign | null;
+}) {
   if (p.material.startsWith("gadget-")) return <GadgetThumb {...p} />;
   if (p.material.startsWith("skin-")) return <SkinThumb {...p} />;
   if (p.material.startsWith("glass-") || p.material === "lens") return <ProtectorThumb {...p} />;

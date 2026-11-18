@@ -21,7 +21,7 @@ export function CartItems({ cart, compact = false }: { cart: Cart; compact?: boo
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={i.product.image} alt="" className="h-[78px] w-auto rounded-lg object-contain" />
               ) : (
-                <ProductThumb material={i.product.material} color={i.color.hex} imageUrl={i.custom?.imageUrl} design={i.product.design ? { url: i.product.design } : null} className="h-[78px] w-auto" />
+                <ProductThumb material={i.product.material} color={i.color.hex} imageUrl={i.custom?.imageUrl} design={i.product.design ? { url: i.product.design } : null} modelSlug={i.model?.slug} className="h-[78px] w-auto" />
               )}
           </Link>
           <div className="flex min-w-0 flex-1 flex-col">

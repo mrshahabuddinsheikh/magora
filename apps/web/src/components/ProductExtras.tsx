@@ -274,7 +274,7 @@ export function BoughtTogether({
         Buy together and save <b className="text-success">{BUNDLE_PCT}%</b> on the set — applied automatically in your bag.
       </p>
       <Row name={`${p.name} (this item)`} sub={current.color.name} price={current.price} on>
-        <ProductThumb material={p.material} color={current.color.hex} accent={current.color.accentHex} design={designFor(viewOf(p.view), current.color)} className="h-[86%] w-auto" />
+        <ProductThumb material={p.material} color={current.color.hex} accent={current.color.accentHex} design={designFor(viewOf(p.view), current.color)} modelSlug={model.slug} className="h-[86%] w-auto" />
       </Row>
       {picks.map((x) => {
         const on = !off.has(x.variantId);
@@ -294,7 +294,7 @@ export function BoughtTogether({
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={photo} alt="" className="h-full w-full object-contain p-1" loading="lazy" />
                 ) : (
-                  <ProductThumb material={x.item.material} color={x.color.hex} accent={x.color.accentHex} design={designFor(viewOf(x.item.view), x.color)} className="h-[86%] w-auto" />
+                  <ProductThumb material={x.item.material} color={x.color.hex} accent={x.color.accentHex} design={designFor(viewOf(x.item.view), x.color)} modelSlug={model.slug} className="h-[86%] w-auto" />
                 )}
               </Row>
             </div>

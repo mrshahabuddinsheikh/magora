@@ -11,18 +11,38 @@ import type { BrandWithModels } from "@/lib/types";
 
 type Cur = { category?: string; brand?: string; model?: string; material?: string; sort?: string; q?: string };
 
-export function ShopFilters({ brands, current }: { brands: BrandWithModels[]; current: Cur }) {
+export function ShopFilters({
+  brands,
+  current,
+  activeBrand,
+  activeModel,
+  onChange,
+}: {
+  brands: BrandWithModels[];
+  current: Cur;
+  activeBrand?: string;
+  activeModel?: string;
+  onChange?: (patch: Partial<Cur>) => void;
+}) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const setPhone = usePrefs((s) => s.setPhone);
 
+  const curBrandSlug = activeBrand !== undefined ? activeBrand : current.brand;
+  const curModelSlug = activeModel !== undefined ? activeModel : current.model;
+
   const go = (patch: Partial<Cur>) => {
+    if (onChange) {
+      onChange(patch);
+      return;
+    }
     const next: Record<string, string | undefined> = { ...current, ...patch };
     const u = new URLSearchParams();
     for (const [k, v] of Object.entries(next)) if (v) u.set(k, v);
     start(() => router.push(`/shop?${u}`, { scroll: false }));
   };
-  const brand = brands.find((b) => b.slug === current.brand);
+
+  const brand = brands.find((b) => b.slug === curBrandSlug);
   const cat = categoryOf(current.category);
 
   return (
@@ -33,11 +53,11 @@ export function ShopFilters({ brands, current }: { brands: BrandWithModels[]; cu
         </span>
         {cat.phoneBased ? (
           <>
-            <button className="chip" data-active={!current.brand && !current.model} onClick={() => go({ brand: undefined, model: undefined })}>
+            <button className="chip" data-active={!curBrandSlug && !curModelSlug} onClick={() => go({ brand: undefined, model: undefined })}>
               All phones
             </button>
             {brands.map((b) => (
-              <button key={b.slug} className="chip" data-active={current.brand === b.slug} onClick={() => go({ brand: b.slug, model: undefined })}>
+              <button key={b.slug} className="chip" data-active={curBrandSlug === b.slug} onClick={() => go({ brand: b.slug, model: undefined })}>
                 {b.name}
               </button>
             ))}
@@ -80,14 +100,14 @@ export function ShopFilters({ brands, current }: { brands: BrandWithModels[]; cu
             <button
               key={m.slug}
               className="chip h-8 text-[13px]"
-              data-active={current.model === m.slug}
+              data-active={curModelSlug === m.slug}
               onClick={() => {
                 setPhone({ slug: m.slug, name: m.name, brand: m.brand.slug });
-                go({ model: current.model === m.slug ? undefined : m.slug, brand: brand.slug });
+                go({ model: curModelSlug === m.slug ? undefined : m.slug, brand: brand.slug });
               }}
             >
               {shortModel(m.name)}
-              {current.model === m.slug && <X size={13} />}
+              {curModelSlug === m.slug && <X size={13} />}
             </button>
           ))}
         </div>
