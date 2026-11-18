@@ -8,7 +8,7 @@ import { notFound } from "../lib/errors";
 import { normalize } from "../lib/text";
 import { store } from "../config";
 import { paymentMethods } from "../payments";
-import { getCodSettings } from "./cart";
+import { getCodSettings, getLeadCaptureSettings } from "./cart";
 import { phoneDetails } from "../lib/phoneDetails";
 import type { CameraSpec } from "../lib/types";
 
@@ -150,7 +150,7 @@ export async function catalogRoutes(app: FastifyInstance) {
   /* store settings for apps */
   app.get("/store", { schema: { tags: ["Store"], summary: "Store settings: currency, shipping, cities, payment methods" } }, async (_req, reply) => {
     reply.header("cache-control", CACHE_HEADER);
-    const codSettings = await getCodSettings();
+    const [codSettings, leadCapture] = await Promise.all([getCodSettings(), getLeadCaptureSettings()]);
     return {
       data: {
         ...store,
@@ -161,9 +161,17 @@ export async function catalogRoutes(app: FastifyInstance) {
           feeBelow: codSettings.feeBelow,
           feeAbove: codSettings.feeAbove,
         },
+        leadCapture,
         paymentMethods: paymentMethods(),
       },
     };
+  });
+
+  /* public lead capture settings */
+  app.get("/lead-capture-settings", { schema: { tags: ["Store"], summary: "Public lead capture popup settings" } }, async (_req, reply) => {
+    reply.header("cache-control", CACHE_HEADER);
+    const leadCapture = await getLeadCaptureSettings();
+    return { data: leadCapture };
   });
 
   /* brands with their models — powers the brand → model picker */

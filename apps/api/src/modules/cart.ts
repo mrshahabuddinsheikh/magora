@@ -72,6 +72,24 @@ export async function getCodSettings(tx: Tx = db) {
   };
 }
 
+export async function getLeadCaptureSettings(tx: Tx = db) {
+  try {
+    const [row] = await tx.select().from(s.leadCaptureSettings).where(eq(s.leadCaptureSettings.id, 1));
+    if (row) return row;
+  } catch {}
+  return {
+    id: 1,
+    enabled: false,
+    showFloatingPill: false,
+    badgeText: "🎁 Rs. 300 OFF Code",
+    heading: "Get Rs. 300 OFF",
+    subheading: "Your first MagSafe case or skin",
+    couponCode: "VIP300",
+    discountAmount: 300,
+    delaySeconds: 10,
+  };
+}
+
 export function computeCodFee(subtotalAfterDiscount: number, settings: { enabled: boolean; threshold: number; feeBelow: number; feeAbove: number }) {
   if (!settings.enabled) return 0;
   return subtotalAfterDiscount < settings.threshold ? settings.feeBelow : settings.feeAbove;

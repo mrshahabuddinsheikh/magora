@@ -73,6 +73,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           <RecentPurchase />
           <PwaInstallPrompt />
           <PushNotificationPrompt />
+          <LeadCaptureModal />
         </Suspense>
         <Analytics />
       </body>

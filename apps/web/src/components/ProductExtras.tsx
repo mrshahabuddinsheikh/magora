@@ -253,8 +253,7 @@ export function BoughtTogether({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [p.slug, model.slug]);
 
-  if (!picks.length || current.soldOut) return null;
-  const chosen = picks.filter((x) => !off.has(x.variantId));
+  const chosen = useMemo(() => picks.filter((x) => !off.has(x.variantId)), [picks, off]);
   const sum = current.price + chosen.reduce((a, x) => a + x.price, 0);
   const save = chosen.length ? Math.round((sum * BUNDLE_PCT) / 100) : 0;
 
@@ -264,6 +263,8 @@ export function BoughtTogether({
     const allExtrasIn = chosen.every((x) => cart.items.some((i) => i.variantId === x.variantId));
     return currentIn && allExtrasIn;
   }, [chosen, cart?.items, current.variantId]);
+
+  if (!picks.length || current.soldOut) return null;
 
   const addAll = async () => {
     if (current.needsPhoto || !current.variantId) {

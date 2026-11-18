@@ -662,3 +662,18 @@ export const codSettings = mysqlTable("cod_settings", {
   feeAbove: int("fee_above").notNull().default(100),    // Rs. 100 if order amount >= threshold
 });
 
+/* ───────────── Lead Capture Popup & Floating Pill Settings ───────────── */
+
+export const leadCaptureSettings = mysqlTable("lead_capture_settings", {
+  id: int("id").primaryKey().autoincrement(),
+  enabled: boolean("enabled").notNull().default(false),
+  showFloatingPill: boolean("show_floating_pill").notNull().default(false),
+  badgeText: varchar("badge_text", { length: 100 }).notNull().default("🎁 Rs. 300 OFF Code"),
+  heading: varchar("heading", { length: 255 }).notNull().default("Get Rs. 300 OFF"),
+  subheading: varchar("subheading", { length: 255 }).notNull().default("Your first MagSafe case or skin"),
+  couponCode: varchar("coupon_code", { length: 50 }).notNull().default("VIP300"),
+  discountAmount: int("discount_amount").notNull().default(300),
+  delaySeconds: int("delay_seconds").notNull().default(10),
+});
+
+

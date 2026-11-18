@@ -3,11 +3,12 @@
 import { useEffect, useState, useCallback } from "react";
 import { 
   FileSpreadsheet, MessageCircle, Phone, RefreshCw, 
-  Search, Trash2, Users, ShoppingBag, Sparkles 
+  Search, Trash2, Users, ShoppingBag, Sparkles, Gift, Settings
 } from "lucide-react";
 import { api, tokenStore } from "@/lib/client-api";
 import { money } from "@/lib/format";
 import { PUBLIC_API_URL } from "@/lib/config";
+import { LeadCaptureSettingsManager } from "./LeadCaptureSettingsManager";
 
 interface CustomerLead {
   id: number;
@@ -48,6 +49,7 @@ export function CustomerLeadsManager() {
   const [q, setQ] = useState("");
   const [sourceFilter, setSourceFilter] = useState("");
   const [exporting, setExporting] = useState(false);
+  const [subTab, setSubTab] = useState<"leads" | "settings">("leads");
 
   const loadLeads = useCallback(async () => {
     setLoading(true);
@@ -112,7 +114,27 @@ export function CustomerLeadsManager() {
 
   return (
     <div className="space-y-6">
-      {/* Top Header Card */}
+      {/* Sub Tabs */}
+      <div className="flex items-center gap-2 border-b border-line pb-3">
+        <button
+          onClick={() => setSubTab("leads")}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-bold transition ${subTab === "leads" ? "bg-ink text-white dark:bg-white dark:text-ink shadow-sm" : "bg-black/5 dark:bg-white/10 text-muted hover:text-ink"}`}
+        >
+          <Users size={16} /> Customer Leads ({meta.totalLeads})
+        </button>
+        <button
+          onClick={() => setSubTab("settings")}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-bold transition ${subTab === "settings" ? "bg-ink text-white dark:bg-white dark:text-ink shadow-sm" : "bg-black/5 dark:bg-white/10 text-muted hover:text-ink"}`}
+        >
+          <Gift size={16} /> Lead Capture Popup &amp; Voucher (ON / OFF)
+        </button>
+      </div>
+
+      {subTab === "settings" ? (
+        <LeadCaptureSettingsManager />
+      ) : (
+        <>
+          {/* Top Header Card */}
       <div className="card p-5 space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-4 border-b border-line pb-4">
           <div>
@@ -306,6 +328,8 @@ export function CustomerLeadsManager() {
           )}
         </div>
       </div>
+        </>
+      )}
     </div>
   );
 }

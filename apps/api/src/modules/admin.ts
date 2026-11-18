@@ -10,7 +10,7 @@ import { revalidateWeb } from "../lib/revalidate";
 import { phoneSearchText, slugify } from "../lib/text";
 import { ORDER_STATUSES } from "../lib/types";
 import { STATUS_LABEL, loadOrder, presentOrder, restock } from "./orders";
-import { getCodSettings } from "./cart";
+import { getCodSettings, getLeadCaptureSettings } from "./cart";
 import { adminReturnRoutes } from "./returns";
 import { addShipmentEvent, stampsFor, upsertShipment } from "./tracking";
 import { SHIPMENT_STATUSES, type ShipmentStatus } from "../lib/types";
@@ -1485,6 +1485,59 @@ export async function adminRoutes(app: FastifyInstance) {
       }
       invalidate("store");
       return { data: { id: 1, enabled, threshold, feeBelow, feeAbove } };
+    },
+  );
+
+  /* Lead capture popup & floating pill settings */
+  app.get("/lead-capture-settings", { schema: { tags, security } }, async () => {
+    const settings = await getLeadCaptureSettings();
+    return { data: settings };
+  });
+
+  app.post(
+    "/lead-capture-settings",
+    {
+      schema: {
+        tags,
+        security,
+        body: Type.Object({
+          enabled: Type.Boolean(),
+          showFloatingPill: Type.Boolean(),
+          badgeText: Type.String(),
+          heading: Type.String(),
+          subheading: Type.String(),
+          couponCode: Type.String(),
+          discountAmount: Type.Integer({ minimum: 0 }),
+          delaySeconds: Type.Integer({ minimum: 0 }),
+        }),
+      },
+    },
+    async (req) => {
+      const body = req.body as {
+        enabled: boolean;
+        showFloatingPill: boolean;
+        badgeText: string;
+        heading: string;
+        subheading: string;
+        couponCode: string;
+        discountAmount: number;
+        delaySeconds: number;
+      };
+      await getLeadCaptureSettings();
+      const [existing] = await db.select().from(s.leadCaptureSettings).where(eq(s.leadCaptureSettings.id, 1));
+      if (existing) {
+        await db
+          .update(s.leadCaptureSettings)
+          .set(body)
+          .where(eq(s.leadCaptureSettings.id, 1));
+      } else {
+        await db
+          .insert(s.leadCaptureSettings)
+          .values({ id: 1, ...body });
+      }
+      invalidate("store");
+      invalidate("lead_capture");
+      return { data: { id: 1, ...body } };
     },
   );
 }

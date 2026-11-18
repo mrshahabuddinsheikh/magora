@@ -91,11 +91,25 @@ export interface Cart {
 }
 
 export interface PaymentMethod { id: string; name: string; description: string; kind: string; enabled: boolean }
+
+export interface LeadCaptureConfig {
+  id?: number;
+  enabled: boolean;
+  showFloatingPill: boolean;
+  badgeText: string;
+  heading: string;
+  subheading: string;
+  couponCode: string;
+  discountAmount: number;
+  delaySeconds: number;
+}
+
 export interface StoreInfo {
   name: string; tagline: string; currency: string; currencySymbol: string;
   supportPhone: string; supportWhatsapp: string; supportEmail: string;
   shipping: { flatRate: number; freeAbove: number; etaDays: string; etaByCity?: Record<string, [number, number]>; etaDefault?: [number, number] };
   cod: { enabled: boolean; fee: number; maxOrderTotal: number; threshold?: number; feeBelow?: number; feeAbove?: number };
+  leadCapture?: LeadCaptureConfig;
   returnsDays: number; cities: string[]; paymentMethods: PaymentMethod[];
 }
 

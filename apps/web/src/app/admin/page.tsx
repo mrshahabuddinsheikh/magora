@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { Banknote, BarChart3, Bell, Boxes, Building2, ClipboardList, Contact2, Database, LogOut, MessageSquare, Package, Palette, PhoneCall, PieChart, Radio, RotateCcw, ShieldCheck, Smartphone, Store, Tag, Truck, Users, Video } from "lucide-react";
+import { Banknote, BarChart3, Bell, Boxes, Building2, ClipboardList, Contact2, Database, Gift, LogOut, MessageSquare, Package, Palette, PhoneCall, PieChart, Radio, RotateCcw, ShieldCheck, Smartphone, Store, Tag, Truck, Users, Video } from "lucide-react";
 import { useAuth } from "@/stores/auth";
 import { cn } from "@/lib/format";
 import { Logo } from "@/components/Header";
@@ -17,12 +17,13 @@ import { ProductBrandsManager } from "@/components/admin/ProductBrandsManager";
 import { CategoriesStylesManager } from "@/components/admin/CategoriesStylesManager";
 import { TrustSignalsManager } from "@/components/admin/TrustSignalsManager";
 import { CustomerLeadsManager } from "@/components/admin/CustomerLeadsManager";
+import { LeadCaptureSettingsManager } from "@/components/admin/LeadCaptureSettingsManager";
 import { ReelsManager } from "@/components/admin/ReelsManager";
 import { DatabaseBackupManager } from "@/components/admin/DatabaseBackupManager";
 import { CodSettingsManager } from "@/components/admin/CodSettingsManager";
 import { api } from "@/lib/client-api";
 
-type Tab = "overview" | "backup" | "cod-settings" | "security" | "confirm" | "desk" | "return-report" | "alerts" | "orders" | "deliveries" | "returns" | "customers" | "leads" | "reels" | "products" | "brands" | "categories" | "trust" | "coupons" | "models" | "reviews";
+type Tab = "overview" | "backup" | "cod-settings" | "security" | "confirm" | "desk" | "return-report" | "alerts" | "orders" | "deliveries" | "returns" | "customers" | "leads" | "lead-capture" | "reels" | "products" | "brands" | "categories" | "trust" | "coupons" | "models" | "reviews";
 const TABS: [Tab, string, typeof Store][] = [
   ["overview", "Dashboard", BarChart3],
   ["cod-settings", "Cash on Delivery (COD) Charges", Banknote],
@@ -36,6 +37,7 @@ const TABS: [Tab, string, typeof Store][] = [
   ["return-report", "Return analysis", PieChart],
   ["customers", "Customers", Users],
   ["leads", "WhatsApp Leads & Excel CRM", Contact2],
+  ["lead-capture", "Lead Capture Popup & Voucher", Gift],
   ["reels", "TikTok & Insta Reels", Video],
   ["products", "Products & stock", Boxes],
   ["brands", "Brands & Companies", Building2],
@@ -160,6 +162,7 @@ export default function AdminPage() {
         {tab === "returns" && <Returns />}
         {tab === "customers" && <Customers openOrder={(n) => go("orders", `#${n}`)} />}
         {tab === "leads" && <CustomerLeadsManager />}
+        {tab === "lead-capture" && <LeadCaptureSettingsManager />}
         {tab === "reels" && <ReelsManager />}
         {tab === "products" && <Products />}
         {tab === "brands" && <ProductBrandsManager />}
