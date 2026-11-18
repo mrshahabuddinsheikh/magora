@@ -45,13 +45,16 @@ async function bootstrap() {
       if (r.ok) apiHealthy = true;
     } catch {}
 
-    if (!apiHealthy) {
-      console.log("⏳ Launching background Fastify API service...");
+    // Ensure process.env.API_URL is consistently defined for Next.js SSR
+    process.env.API_URL = process.env.API_URL || `http://127.0.0.1:${apiPort}/api/v1`;
+
+    function launchFastify() {
       const distServer = path.join(apiDir, "dist", "server.js");
       const hasDist = fs.existsSync(distServer);
       const tsxCli = path.resolve(__dirname, "node_modules", "tsx", "dist", "cli.mjs");
       const spawnArgs = hasDist ? [distServer] : [tsxCli, "src/server.ts"];
 
+      console.log("⏳ Spawning Fastify API worker...");
       const apiProcess = spawn(
         process.execPath,
         spawnArgs,
@@ -75,6 +78,32 @@ async function bootstrap() {
       apiProcess.on("error", (err) => {
         console.error("Fastify API spawn error:", err);
       });
+
+      apiProcess.on("exit", (code, signal) => {
+        console.warn(`⚠️ Fastify API process exited with code ${code} (${signal}). Auto-restarting in 1s...`);
+        setTimeout(launchFastify, 1000);
+      });
+
+      return apiProcess;
+    }
+
+    if (!apiHealthy) {
+      launchFastify();
+    }
+
+    // Await Fastify API readiness before binding Next.js server to prevent cold-start 404s
+    console.log("⏳ Awaiting Fastify API health check...");
+    let retries = 30;
+    while (retries > 0) {
+      try {
+        const r = await fetch(`http://127.0.0.1:${apiPort}/health`);
+        if (r.ok) {
+          console.log("✓ Fastify API is healthy, verified, and accepting requests!");
+          break;
+        }
+      } catch {}
+      await new Promise((resolve) => setTimeout(resolve, 400));
+      retries--;
     }
 
     // 2. Load Next.js production handler

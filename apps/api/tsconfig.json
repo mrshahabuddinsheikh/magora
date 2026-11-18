@@ -10,5 +10,6 @@
     "noEmit": true,
     "types": ["node"]
   },
-  "include": ["src", "drizzle.config.ts"]
+  "include": ["src", "drizzle.config.ts"],
+  "exclude": ["src/db/migrate-reels.ts", "src/db/seed-demo-order-return.ts"]
 }

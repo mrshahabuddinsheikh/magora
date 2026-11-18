@@ -6,7 +6,7 @@ import {
   Banknote, BarChart3, Bell, Boxes, Building2, ClipboardList, Coins, Contact2, 
   Database, Gift, LogOut, MessageSquare, Package, Palette, PhoneCall, PieChart, 
   Radio, RotateCcw, ShieldCheck, Smartphone, Store, Tag, Truck, Users, Video, 
-  Share2, Search, ChevronDown, ChevronRight, Webhook
+  Share2, Search, ChevronDown, ChevronRight, Webhook, AlertTriangle, UserCheck
 } from "lucide-react";
 import { useAuth } from "@/stores/auth";
 import { cn } from "@/lib/format";
@@ -29,6 +29,8 @@ import { DatabaseBackupManager } from "@/components/admin/DatabaseBackupManager"
 import { CodSettingsManager } from "@/components/admin/CodSettingsManager";
 import { MarketingPixelsManager } from "@/components/admin/MarketingPixelsManager";
 import { SocialWebhooks } from "@/components/admin/SocialWebhooks";
+import { InventoryAlerts } from "@/components/admin/InventoryAlerts";
+import { StaffManager } from "@/components/admin/StaffManager";
 import { api } from "@/lib/client-api";
 
 export type Tab = 
@@ -56,7 +58,9 @@ export type Tab =
   | "models" 
   | "reviews"
   | "marketing-pixels"
-  | "social-webhooks";
+  | "social-webhooks"
+  | "inventory-alerts"
+  | "staff";
 
 interface TabItem {
   id: Tab;
@@ -91,6 +95,7 @@ const CATEGORIES: CategoryGroup[] = [
     title: "Catalog & 3D Studio",
     tabs: [
       { id: "products", label: "Products & Stock", icon: Boxes },
+      { id: "inventory-alerts", label: "Low Stock Alerts", icon: AlertTriangle },
       { id: "models", label: "Phone Models & 3D GLB", icon: Smartphone },
       { id: "brands", label: "Brands & Companies", icon: Building2 },
       { id: "categories", label: "Categories & 3D Styles", icon: Palette },
@@ -125,6 +130,7 @@ const CATEGORIES: CategoryGroup[] = [
     tabs: [
       { id: "backup", label: "MySQL Backup & Restore", icon: Database },
       { id: "security", label: "Cyber Security Shield", icon: ShieldCheck },
+      { id: "staff", label: "Staff & Team Permissions", icon: UserCheck },
     ],
   },
 ];
@@ -351,6 +357,8 @@ export default function AdminPage() {
         {tab === "overview" && <Overview go={go} />}
         {tab === "marketing-pixels" && <MarketingPixelsManager />}
         {tab === "social-webhooks" && <SocialWebhooks />}
+        {tab === "inventory-alerts" && <InventoryAlerts />}
+        {tab === "staff" && <StaffManager />}
         {tab === "cod-settings" && <CodSettingsManager />}
         {tab === "backup" && <DatabaseBackupManager />}
         {tab === "security" && <SecurityShield />}

@@ -2,8 +2,9 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Banknote, Check, ChevronDown, Magnet, Minus, Plus, RotateCcw, ShoppingBag, Truck, Zap, Hand, Smartphone, X } from "lucide-react";
+import { Banknote, Check, ChevronDown, Glasses, Magnet, Minus, Plus, RotateCcw, ShoppingBag, Truck, Zap, Hand, Smartphone, X } from "lucide-react";
 import { LazyViewer } from "./viewer/LazyViewer";
+import { ArViewerModal } from "./ArViewerModal";
 import { Lightbox } from "./Lightbox";
 import { designFor, viewOf } from "@/lib/view";
 import { Box as Box3d } from "lucide-react";
@@ -72,6 +73,7 @@ export function ProductClient({ product: p, delivery }: { product: Product; deli
   const [engravingFont, setEngravingFont] = useState<"sans" | "serif" | "script">("sans");
   const [loyalty, setLoyalty] = useState<LoyaltyConfig | null>(null);
   const [showCoinsModal, setShowCoinsModal] = useState(false);
+  const [arOpen, setArOpen] = useState(false);
   const ctaRef = useRef<HTMLDivElement>(null);
 
   // Load live admin loyalty settings
@@ -302,6 +304,8 @@ export function ProductClient({ product: p, delivery }: { product: Product; deli
                   coverage={coverage}
                   imageUrl={photo?.preview ?? null}
                   design={design}
+                  engravingText={engravingEnabled ? engravingText : null}
+                  engravingFont={engravingFont}
                   autoRotate
                   view={view}
                   viewNonce={nonce}
@@ -313,8 +317,19 @@ export function ProductClient({ product: p, delivery }: { product: Product; deli
               {isCustom ? (photo ? "Your photo" : "Upload a photo") : color.name} · {model.name}
             </div>
             {slide < 0 && (
-              <div className="absolute right-4 top-4 hidden items-center gap-1 rounded-full bg-white/70 px-3 py-1.5 text-[12px] text-muted backdrop-blur sm:flex">
-                <Hand size={13} /> Drag to rotate · scroll to zoom
+              <div className="absolute right-4 top-4 flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setArOpen(true)}
+                  className="rounded-full bg-white/85 dark:bg-black/75 px-3 py-1.5 text-[12px] font-bold text-ink backdrop-blur shadow-sm hover:bg-white dark:hover:bg-black flex items-center gap-1.5 transition border border-black/10 dark:border-white/15"
+                  title="View on your table in Augmented Reality"
+                >
+                  <Glasses size={14} className="text-accent" />
+                  <span>View in AR</span>
+                </button>
+                <div className="hidden items-center gap-1 rounded-full bg-white/70 px-3 py-1.5 text-[12px] text-muted backdrop-blur sm:flex">
+                  <Hand size={13} /> Drag to rotate
+                </div>
               </div>
             )}
             {engravingEnabled && engravingText.trim() && slide < 0 && (
@@ -947,6 +962,15 @@ export function ProductClient({ product: p, delivery }: { product: Product; deli
         colorHex={color?.hex}
         variantId={variant?.id}
         custom={engravingEnabled && engravingText ? { engraving: { text: engravingText, font: engravingFont } } : undefined}
+      />
+      <ArViewerModal
+        isOpen={arOpen}
+        onClose={() => setArOpen(false)}
+        productName={p.name}
+        modelName={model?.name || ""}
+        colorName={color?.name || ""}
+        colorHex={color?.hex || "#000000"}
+        productUrl={typeof window !== "undefined" ? window.location.href : ""}
       />
     </>
   );

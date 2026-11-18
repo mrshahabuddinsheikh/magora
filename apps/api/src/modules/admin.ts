@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { Type } from "typebox";
+import bcrypt from "bcryptjs";
 import { and, inArray, isNull, asc, avg, count, desc, eq, gte, like, lte, ne, or, sql, type SQL } from "drizzle-orm";
 import { db } from "../db/client";
 import * as s from "../db/schema";
@@ -419,6 +420,166 @@ export async function adminRoutes(app: FastifyInstance) {
         count: results.filter((r) => r.success).length,
         results,
       };
+    },
+  );
+
+  /** Low stock alerts & supplier restock assistant */
+  app.get("/inventory/low-stock", { schema: { tags, security } }, async (req) => {
+    const threshold = Number((req.query as any)?.threshold) || 5;
+    const rows = await db
+      .select({
+        variantId: s.variants.id,
+        productId: s.products.id,
+        productName: s.products.name,
+        productSlug: s.products.slug,
+        modelId: s.phoneModels.id,
+        modelName: s.phoneModels.name,
+        colorId: s.productColors.id,
+        colorName: s.productColors.name,
+        sku: s.variants.sku,
+        stock: s.variants.stock,
+        price: s.variants.price,
+      })
+      .from(s.variants)
+      .innerJoin(s.products, eq(s.variants.productId, s.products.id))
+      .leftJoin(s.phoneModels, eq(s.variants.phoneModelId, s.phoneModels.id))
+      .innerJoin(s.productColors, eq(s.variants.colorId, s.productColors.id))
+      .where(and(eq(s.variants.active, true), lte(s.variants.stock, threshold)))
+      .orderBy(asc(s.variants.stock))
+      .limit(100);
+
+    const itemsSummary = rows.map((r) => `• ${r.productName} (${r.modelName || "Standard"}, ${r.colorName}) — Remaining: ${r.stock}`).join("\n");
+    const whatsappSupplierMessage = `Assalam o Alaikum!\n\nMagora Store ke liye in items ka urgent restock order generate karna hai:\n\n${itemsSummary}\n\nKripya confirmation aur delivery time bata dein. Shukriya!`;
+
+    return {
+      count: rows.length,
+      threshold,
+      items: rows,
+      whatsappSupplierMessage,
+    };
+  });
+
+  /** 1-Click Fast Stock Adjustment */
+  app.post(
+    "/inventory/quick-restock",
+    {
+      schema: {
+        tags,
+        security,
+        body: Type.Object({
+          variantId: Type.Integer(),
+          addQty: Type.Integer({ minimum: 1, maximum: 500 }),
+        }),
+      },
+    },
+    async (req) => {
+      const { variantId, addQty } = req.body as { variantId: number; addQty: number };
+      const [v] = await db.select().from(s.variants).where(eq(s.variants.id, variantId));
+      if (!v) throw notFound("Variant");
+
+      await db
+        .update(s.variants)
+        .set({ stock: sql`${s.variants.stock} + ${addQty}` })
+        .where(eq(s.variants.id, variantId));
+
+      invalidate("catalog:product");
+      const [updated] = await db.select().from(s.variants).where(eq(s.variants.id, variantId));
+      return { success: true, variant: updated };
+    },
+  );
+
+  /** Staff members list */
+  app.get("/staff", { schema: { tags, security } }, async () => {
+    const rows = await db
+      .select({
+        id: s.users.id,
+        email: s.users.email,
+        name: s.users.name,
+        role: s.users.role,
+        createdAt: s.users.createdAt,
+      })
+      .from(s.users)
+      .where(ne(s.users.role, "customer"))
+      .orderBy(desc(s.users.createdAt));
+    return { data: rows };
+  });
+
+  /** Add/Invite Staff Member */
+  app.post(
+    "/staff",
+    {
+      schema: {
+        tags,
+        security,
+        body: Type.Object({
+          email: Type.String(),
+          name: Type.String({ minLength: 2, maxLength: 80 }),
+          password: Type.String({ minLength: 6 }),
+          role: Type.Union([Type.Literal("admin"), Type.Literal("operations"), Type.Literal("support")]),
+        }),
+      },
+    },
+    async (req) => {
+      const { email, name, password, role } = req.body as { email: string; name: string; password: string; role: string };
+      const normalizedEmail = email.trim().toLowerCase();
+      const [existing] = await db.select().from(s.users).where(eq(s.users.email, normalizedEmail));
+      if (existing) throw badRequest("A user with this email already exists");
+
+      const passwordHash = await bcrypt.hash(password, 10);
+      const [ins] = await db.insert(s.users).values({
+        email: normalizedEmail,
+        name: name.trim(),
+        passwordHash,
+        role,
+      });
+
+      const [newUser] = await db
+        .select({
+          id: s.users.id,
+          email: s.users.email,
+          name: s.users.name,
+          role: s.users.role,
+          createdAt: s.users.createdAt,
+        })
+        .from(s.users)
+        .where(eq(s.users.id, ins.insertId));
+
+      return { data: newUser };
+    },
+  );
+
+  /** Update Staff Role */
+  app.patch(
+    "/staff/:id",
+    {
+      schema: {
+        tags,
+        security,
+        params: Type.Object({ id: Type.Integer() }),
+        body: Type.Object({
+          role: Type.Union([Type.Literal("admin"), Type.Literal("operations"), Type.Literal("support"), Type.Literal("customer")]),
+        }),
+      },
+    },
+    async (req) => {
+      const id = (req.params as { id: number }).id;
+      const { role } = req.body as { role: string };
+      const [u] = await db.select().from(s.users).where(eq(s.users.id, id));
+      if (!u) throw notFound("Staff user not found");
+
+      await db.update(s.users).set({ role, updatedAt: new Date() }).where(eq(s.users.id, id));
+      const [updated] = await db
+        .select({
+          id: s.users.id,
+          email: s.users.email,
+          name: s.users.name,
+          role: s.users.role,
+          createdAt: s.users.createdAt,
+        })
+        .from(s.users)
+        .where(eq(s.users.id, id));
+
+      return { data: updated };
     },
   );
 

@@ -56,6 +56,10 @@ export interface ViewerProps {
   coverage?: "back" | "back_sides";
   /** custom photo skins: object URL or uploaded URL */
   imageUrl?: string | null;
+  /** custom laser engraving text on the 3D back */
+  engravingText?: string | null;
+  /** font style: sans, serif, mono, script */
+  engravingFont?: string | null;
   autoRotate?: boolean;
   view?: ViewAngle;
   /** bumps when the same view is requested again */
@@ -302,7 +306,81 @@ function PrintLayer({ spec, kind, thin, design, material }: { spec: PhoneSpec; k
   );
 }
 
-function Case({ spec, brand, material, color, accent, design }: Omit<ViewerProps, "autoRotate" | "view" | "interactive">) {
+function EngravingLayer({
+  spec,
+  kind,
+  thin,
+  text,
+  font,
+}: {
+  spec: PhoneSpec;
+  kind: "case" | "skin";
+  thin?: boolean;
+  text: string;
+  font?: string | null;
+}) {
+  const g = useMemo(() => buildPrintGeometry(spec, kind, thin), [spec, kind, thin]);
+  const tex = useMemo(() => {
+    if (!text.trim()) return null;
+    const canvas = document.createElement("canvas");
+    canvas.width = 1024;
+    canvas.height = Math.round(1024 * (g.h / g.w));
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return null;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Position engraving at lower third of the back
+    const y = canvas.height * 0.78;
+    const x = canvas.width / 2;
+
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+
+    let fontFam = "system-ui, -apple-system, sans-serif";
+    if (font === "serif") fontFam = "Georgia, 'Times New Roman', serif";
+    else if (font === "mono") fontFam = "'Courier New', Courier, monospace";
+    else if (font === "script") fontFam = "'Brush Script MT', cursive, sans-serif";
+
+    const maxChars = Math.max(text.length, 6);
+    const fontSize = Math.min(84, Math.round(canvas.width / (maxChars * 0.95)));
+    ctx.font = `bold ${fontSize}px ${fontFam}`;
+
+    // Depth shadow
+    ctx.fillStyle = "rgba(0, 0, 0, 0.4)";
+    ctx.fillText(text.toUpperCase(), x + 1.5, y + 2.5);
+
+    // Laser engraved metallic silver foil
+    ctx.fillStyle = "rgba(255, 255, 255, 0.92)";
+    ctx.fillText(text.toUpperCase(), x, y);
+
+    const t = new THREE.CanvasTexture(canvas);
+    t.colorSpace = THREE.SRGBColorSpace;
+    t.needsUpdate = true;
+    return t;
+  }, [text, font, g.w, g.h]);
+
+  useEffect(() => () => tex?.dispose(), [tex]);
+  if (!tex) return null;
+
+  return (
+    <mesh geometry={g.geo} renderOrder={6}>
+      <meshPhysicalMaterial
+        map={tex}
+        transparent
+        alphaTest={0.02}
+        roughness={0.2}
+        metalness={0.8}
+        clearcoat={0.9}
+        depthWrite={false}
+        polygonOffset
+        polygonOffsetFactor={-3}
+      />
+    </mesh>
+  );
+}
+
+function Case({ spec, brand, material, color, accent, design, engravingText, engravingFont }: Omit<ViewerProps, "autoRotate" | "view" | "interactive">) {
   const thin = material === "carbon";
   const g = useMemo(() => buildCaseGeometries(spec, thin), [spec, thin]);
   const m = useCaseMaterial(material, color, accent)!;
@@ -340,6 +418,7 @@ function Case({ spec, brand, material, color, accent, design }: Omit<ViewerProps
       )}
       {m.ringVisible === "outline" && <mesh geometry={g.ringOutline} material={m.ring} renderOrder={4} />}
       {design && <PrintLayer spec={spec} kind="case" thin={thin} design={design} material={material} />}
+      {engravingText && <EngravingLayer spec={spec} kind="case" thin={thin} text={engravingText} font={engravingFont} />}
       {buttons.map((b, i) => {
         const out = b.x > 0 ? 1 : -1;
         return b.kind === "camera" || b.kind === "slider" ? (
@@ -375,7 +454,7 @@ function useImageTexture(url?: string | null) {
   return tex;
 }
 
-function Skin({ spec, material, color, accent, coverage, imageUrl, design }: ViewerProps) {
+function Skin({ spec, material, color, accent, coverage, imageUrl, design, engravingText, engravingFont }: ViewerProps) {
   const g = useMemo(() => buildSkinGeometries(spec, coverage === "back_sides"), [spec, coverage]);
   const photo = useImageTexture(material === "skin-custom" ? imageUrl : null);
 
@@ -441,6 +520,7 @@ function Skin({ spec, material, color, accent, coverage, imageUrl, design }: Vie
       <mesh geometry={g.backGeo} material={mats.back} />
       {g.sideGeo && <mesh geometry={g.sideGeo} material={mats.side} />}
       {design && material !== "skin-custom" && <PrintLayer spec={spec} kind="skin" design={design} material={material} />}
+      {engravingText && <EngravingLayer spec={spec} kind="skin" text={engravingText} font={engravingFont} />}
     </group>
   );
 }
@@ -512,7 +592,7 @@ function Invalidator(props: ViewerProps) {
   const { invalidate } = useThree();
   useEffect(() => {
     invalidate();
-  }, [props.spec, props.color, props.material, props.accent, props.coverage, props.design, props.brand, invalidate]);
+  }, [props.spec, props.color, props.material, props.accent, props.coverage, props.design, props.brand, props.engravingText, props.engravingFont, invalidate]);
   return null;
 }
 
@@ -593,8 +673,8 @@ export default function PhoneCaseViewer(props: ViewerProps) {
     cool.current = setTimeout(() => setHot(false), ms);
   };
   useEffect(() => {
-    queueMicrotask(() => keepAlive(1800)); // camera glides to a new view or updates on model/spec/color change
-  }, [props.view, props.viewNonce, props.spec, props.color, props.material, props.brand]);
+    queueMicrotask(() => keepAlive(1800)); // camera glides to a new view or updates on model/spec/color/engraving change
+  }, [props.view, props.viewNonce, props.spec, props.color, props.material, props.brand, props.engravingText, props.engravingFont]);
   useEffect(() => () => void (cool.current && clearTimeout(cool.current)), []);
 
   return (

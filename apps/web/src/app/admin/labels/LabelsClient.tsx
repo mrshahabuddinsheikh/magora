@@ -359,11 +359,112 @@ function PickList({ labels }: { labels: Label[] }) {
   );
 }
 
+function CourierManifest({ labels, from }: { labels: Label[]; from: Data["from"] }) {
+  const totalCod = labels.reduce((a, l) => a + (l.codDue || 0), 0);
+  const couriersList = Array.from(new Set(labels.map((l) => l.courier || "TRAX / POSTEX / TCS"))).join(", ");
+  const dateStr = new Date().toLocaleDateString("en-PK", {
+    weekday: "short",
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+  return (
+    <div className="manifest p-8 bg-white max-w-[950px] mx-auto text-black border border-black shadow-lg my-4">
+      {/* Manifest Header */}
+      <div className="border-b-2 border-black pb-4 mb-5 flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-black uppercase tracking-wider">{from.name}</h1>
+          <p className="text-sm font-bold text-gray-700">Official Courier Handover & Dispatch Manifest</p>
+          <p className="text-xs text-gray-500 mt-1">{from.address} · Tel: {from.phone}</p>
+        </div>
+        <div className="text-right">
+          <div className="inline-block bg-black text-white px-3 py-1 font-mono text-xs font-bold uppercase rounded">
+            MANIFEST REF #{Date.now().toString().slice(-8)}
+          </div>
+          <p className="text-xs text-gray-600 mt-2 font-medium">Date & Time: {dateStr}</p>
+          <p className="text-xs font-bold text-black mt-0.5">Courier(s): {couriersList}</p>
+        </div>
+      </div>
+
+      {/* Summary Box */}
+      <div className="grid grid-cols-3 gap-4 p-4 border border-black rounded-lg mb-6 bg-gray-50 text-center">
+        <div>
+          <span className="text-xs uppercase font-bold text-gray-600 block">Total Parcels</span>
+          <b className="text-xl font-black">{labels.length} Shipments</b>
+        </div>
+        <div>
+          <span className="text-xs uppercase font-bold text-gray-600 block">Total COD Value</span>
+          <b className="text-xl font-black">{money(totalCod)}</b>
+        </div>
+        <div>
+          <span className="text-xs uppercase font-bold text-gray-600 block">Security Seals</span>
+          <b className="text-xl font-black text-emerald-700">100% Sealed</b>
+        </div>
+      </div>
+
+      {/* Orders Table */}
+      <table className="w-full text-xs border-collapse border border-black mb-6">
+        <thead>
+          <tr className="bg-gray-200 border-b border-black text-left">
+            <th className="p-2 border-r border-black w-8">#</th>
+            <th className="p-2 border-r border-black">Order No</th>
+            <th className="p-2 border-r border-black">Tracking CN</th>
+            <th className="p-2 border-r border-black">Consignee Name</th>
+            <th className="p-2 border-r border-black">Destination City</th>
+            <th className="p-2 border-r border-black">Phone Number</th>
+            <th className="p-2 border-r border-black text-right">COD (PKR)</th>
+            <th className="p-2 text-center w-12">Rider ✓</th>
+          </tr>
+        </thead>
+        <tbody>
+          {labels.map((l, i) => (
+            <tr key={l.number} className="border-b border-gray-300">
+              <td className="p-2 border-r border-black text-center font-bold">{i + 1}</td>
+              <td className="p-2 border-r border-black font-mono font-bold">{l.number}</td>
+              <td className="p-2 border-r border-black font-mono font-bold text-blue-900">{l.trackingNumber || "—"}</td>
+              <td className="p-2 border-r border-black font-semibold">{l.name}</td>
+              <td className="p-2 border-r border-black font-bold uppercase">{l.city}</td>
+              <td className="p-2 border-r border-black font-mono">{localPhone(l.phone)}</td>
+              <td className="p-2 border-r border-black text-right font-bold">{l.codDue ? money(l.codDue) : "PAID"}</td>
+              <td className="p-2 text-center font-bold text-base">☐</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      {/* Legal & Handover Signatures */}
+      <p className="text-[11px] text-gray-600 italic mb-6">
+        * Declaration: The courier rider/agent hereby confirms physical receipt of the above mentioned parcels in sealed, tamper-evident condition. Both parties agree that the consignments listed above are officially accepted into the courier network.
+      </p>
+
+      <div className="grid grid-cols-2 gap-8 pt-4 border-t-2 border-black">
+        <div className="border border-black p-4 rounded-lg space-y-2">
+          <p className="font-bold text-xs uppercase text-gray-700">Handed Over By (Warehouse Dispatcher)</p>
+          <div className="h-14 border-b border-dashed border-gray-400" />
+          <p className="text-xs">Signature & Official Stamp</p>
+          <p className="text-xs text-gray-500">Date: ________________________</p>
+        </div>
+        <div className="border border-black p-4 rounded-lg space-y-2">
+          <p className="font-bold text-xs uppercase text-gray-700">Picked Up By (Courier Rider / Agent)</p>
+          <p className="text-xs font-semibold">Rider Name: ________________________________</p>
+          <p className="text-xs font-semibold">Rider CNIC / ID: ____________________________</p>
+          <p className="text-xs font-semibold">Rider Mobile: _______________________________</p>
+          <div className="h-8 border-b border-dashed border-gray-400" />
+          <p className="text-xs">Rider Signature & Stamp</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function LabelsClient() {
   const sp = useSearchParams();
   const numbers = sp.get("numbers") ?? "";
   const [size, setSize] = useState<"a6" | "a4">((sp.get("size") as "a6" | "a4") ?? "a4");
-  const [view, setView] = useState<"labels" | "pick">((sp.get("view") as "labels" | "pick") ?? "labels");
+  const [view, setView] = useState<"labels" | "pick" | "manifest">((sp.get("view") as "labels" | "pick" | "manifest") ?? "labels");
   const [data, setData] = useState<Data | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [marked, setMarked] = useState(false);
@@ -405,6 +506,7 @@ export function LabelsClient() {
           <div className="seg">
             <button className={view === "labels" ? "on" : ""} onClick={() => setView("labels")}>Parcel labels ({data.labels.length})</button>
             <button className={view === "pick" ? "on" : ""} onClick={() => setView("pick")}>Pick list</button>
+            <button className={view === "manifest" ? "on" : ""} onClick={() => setView("manifest")}>📋 Courier Manifest</button>
           </div>
           {view === "labels" && (
             <div className="seg">
@@ -436,6 +538,8 @@ export function LabelsClient() {
               />
             ))}
           </div>
+        ) : view === "manifest" ? (
+          <CourierManifest labels={data.labels} from={data.from} />
         ) : (
           <PickList labels={data.labels} />
         )}
