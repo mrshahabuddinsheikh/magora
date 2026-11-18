@@ -6,7 +6,7 @@ import {
   Banknote, BarChart3, Bell, Boxes, Building2, ClipboardList, Coins, Contact2, 
   Database, Gift, LogOut, MessageSquare, Package, Palette, PhoneCall, PieChart, 
   Radio, RotateCcw, ShieldCheck, Smartphone, Store, Tag, Truck, Users, Video, 
-  Share2, Search, ChevronDown, ChevronRight
+  Share2, Search, ChevronDown, ChevronRight, Webhook
 } from "lucide-react";
 import { useAuth } from "@/stores/auth";
 import { cn } from "@/lib/format";
@@ -28,6 +28,7 @@ import { ReelsManager } from "@/components/admin/ReelsManager";
 import { DatabaseBackupManager } from "@/components/admin/DatabaseBackupManager";
 import { CodSettingsManager } from "@/components/admin/CodSettingsManager";
 import { MarketingPixelsManager } from "@/components/admin/MarketingPixelsManager";
+import { SocialWebhooks } from "@/components/admin/SocialWebhooks";
 import { api } from "@/lib/client-api";
 
 export type Tab = 
@@ -54,7 +55,8 @@ export type Tab =
   | "coupons" 
   | "models" 
   | "reviews"
-  | "marketing-pixels";
+  | "marketing-pixels"
+  | "social-webhooks";
 
 interface TabItem {
   id: Tab;
@@ -100,6 +102,7 @@ const CATEGORIES: CategoryGroup[] = [
     title: "Marketing & Ad Pixels",
     tabs: [
       { id: "marketing-pixels", label: "Meta, TikTok & Google Ads", icon: Share2 },
+      { id: "social-webhooks", label: "Social Ads Webhooks (Meta & TikTok)", icon: Webhook },
       { id: "lead-capture", label: "Lead Capture Popup", icon: Gift },
       { id: "leads", label: "WhatsApp Leads CRM", icon: Contact2 },
       { id: "reels", label: "TikTok & Insta Reels", icon: Video },
@@ -347,6 +350,7 @@ export default function AdminPage() {
 
         {tab === "overview" && <Overview go={go} />}
         {tab === "marketing-pixels" && <MarketingPixelsManager />}
+        {tab === "social-webhooks" && <SocialWebhooks />}
         {tab === "cod-settings" && <CodSettingsManager />}
         {tab === "backup" && <DatabaseBackupManager />}
         {tab === "security" && <SecurityShield />}

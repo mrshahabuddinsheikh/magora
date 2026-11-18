@@ -33,6 +33,20 @@ export async function downloadCsv(params = "") {
   URL.revokeObjectURL(a.href);
 }
 
+export function SourceBadge({ source }: { source?: string }) {
+  if (!source || source === "web") return <span className="text-muted">Web</span>;
+  if (source === "facebook_ad") {
+    return <span className="inline-flex items-center rounded bg-blue-100 px-1.5 py-0.5 text-[10.5px] font-bold text-blue-700">Meta FB Ad</span>;
+  }
+  if (source === "tiktok_ad") {
+    return <span className="inline-flex items-center rounded bg-fuchsia-100 px-1.5 py-0.5 text-[10.5px] font-bold text-fuchsia-700">TikTok Ad</span>;
+  }
+  if (source === "google_ad") {
+    return <span className="inline-flex items-center rounded bg-amber-100 px-1.5 py-0.5 text-[10.5px] font-bold text-amber-800">Google Ad</span>;
+  }
+  return <span className="inline-flex items-center rounded bg-gray-100 px-1.5 py-0.5 text-[10.5px] font-semibold text-gray-700">{source}</span>;
+}
+
 export function Orders({ initial }: { initial?: string }) {
   const [rows, setRows] = useState<Row[]>([]);
   const [status, setStatus] = useState(initial && !initial.startsWith("#") ? initial : "");
@@ -90,7 +104,7 @@ export function Orders({ initial }: { initial?: string }) {
             <tbody className="divide-y divide-line">
               {rows.map((o) => (
                 <tr key={o.number} className={cn("cursor-pointer hover:bg-white/70", open?.number === o.number && "bg-white")} onClick={() => openOrder(o.number)}>
-                  <td className="py-2.5"><b>{o.number}</b><div className="text-xs text-muted">{dateTime(o.createdAt)} · {o.source}</div></td>
+                  <td className="py-2.5"><b>{o.number}</b><div className="flex items-center gap-1.5 text-xs text-muted">{dateTime(o.createdAt)} · <SourceBadge source={o.source} /></div></td>
                   <td>{o.customerName}<div className="text-xs text-muted">{o.customerPhone}</div></td>
                   <td>{o.city}</td>
                   <td className="text-right tabular-nums">{money(o.total)}<div className="text-xs uppercase text-muted">{o.paymentMethod} · {o.paymentStatus}</div></td>
@@ -113,7 +127,9 @@ export function Orders({ initial }: { initial?: string }) {
           <div className="space-y-3">
             <div className="card p-4">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="flex flex-wrap items-center gap-1.5 font-bold">{open.number} <Pill s={open.status} /> <RiskBadge risk={(open as { risk?: Parameters<typeof RiskBadge>[0]["risk"] }).risk} /></p>
+                <p className="flex flex-wrap items-center gap-1.5 font-bold">
+                  {open.number} <Pill s={open.status} /> <SourceBadge source={open.source} /> <RiskBadge risk={(open as { risk?: Parameters<typeof RiskBadge>[0]["risk"] }).risk} />
+                </p>
                 <div className="flex gap-2">
                   <Link href={`/admin/labels?numbers=${open.number}`} target="_blank" className="chip h-8 text-xs"><Printer size={13} /> Parcel label</Link>
                   <Link href={`/admin/invoice/${open.number}`} target="_blank" className="chip h-8 text-xs"><Printer size={13} /> Invoice / slip</Link>
