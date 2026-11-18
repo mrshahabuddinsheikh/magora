@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { Banknote, BarChart3, Bell, Boxes, Building2, ClipboardList, Contact2, Database, Gift, LogOut, MessageSquare, Package, Palette, PhoneCall, PieChart, Radio, RotateCcw, ShieldCheck, Smartphone, Store, Tag, Truck, Users, Video } from "lucide-react";
+import { Banknote, BarChart3, Bell, Boxes, Building2, ClipboardList, Coins, Contact2, Database, Gift, LogOut, MessageSquare, Package, Palette, PhoneCall, PieChart, Radio, RotateCcw, ShieldCheck, Smartphone, Store, Tag, Truck, Users, Video } from "lucide-react";
 import { useAuth } from "@/stores/auth";
 import { cn } from "@/lib/format";
 import { Logo } from "@/components/Header";
@@ -18,15 +18,17 @@ import { CategoriesStylesManager } from "@/components/admin/CategoriesStylesMana
 import { TrustSignalsManager } from "@/components/admin/TrustSignalsManager";
 import { CustomerLeadsManager } from "@/components/admin/CustomerLeadsManager";
 import { LeadCaptureSettingsManager } from "@/components/admin/LeadCaptureSettingsManager";
+import { LoyaltyManager } from "@/components/admin/LoyaltyManager";
 import { ReelsManager } from "@/components/admin/ReelsManager";
 import { DatabaseBackupManager } from "@/components/admin/DatabaseBackupManager";
 import { CodSettingsManager } from "@/components/admin/CodSettingsManager";
 import { api } from "@/lib/client-api";
 
-type Tab = "overview" | "backup" | "cod-settings" | "security" | "confirm" | "desk" | "return-report" | "alerts" | "orders" | "deliveries" | "returns" | "customers" | "leads" | "lead-capture" | "reels" | "products" | "brands" | "categories" | "trust" | "coupons" | "models" | "reviews";
+type Tab = "overview" | "backup" | "cod-settings" | "security" | "confirm" | "desk" | "return-report" | "alerts" | "orders" | "deliveries" | "returns" | "customers" | "leads" | "lead-capture" | "loyalty" | "reels" | "products" | "brands" | "categories" | "trust" | "coupons" | "models" | "reviews";
 const TABS: [Tab, string, typeof Store][] = [
   ["overview", "Dashboard", BarChart3],
   ["cod-settings", "Cash on Delivery (COD) Charges", Banknote],
+  ["loyalty", "Magora Coins & Loyalty Rewards", Coins],
   ["backup", "Database Backup & Restore", Database],
   ["security", "Cyber Security Shield", ShieldCheck],
   ["confirm", "Confirm COD orders", PhoneCall],
@@ -163,6 +165,7 @@ export default function AdminPage() {
         {tab === "customers" && <Customers openOrder={(n) => go("orders", `#${n}`)} />}
         {tab === "leads" && <CustomerLeadsManager />}
         {tab === "lead-capture" && <LeadCaptureSettingsManager />}
+        {tab === "loyalty" && <LoyaltyManager />}
         {tab === "reels" && <ReelsManager />}
         {tab === "products" && <Products />}
         {tab === "brands" && <ProductBrandsManager />}

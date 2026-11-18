@@ -104,12 +104,39 @@ export interface LeadCaptureConfig {
   delaySeconds: number;
 }
 
+export interface LoyaltyConfig {
+  id?: number;
+  enabled: boolean;
+  coinRatePct: number;
+  coinValuePkr: number;
+  minOrderPkr: number;
+  customBadgeTemplate: string;
+  termsNotice: string;
+}
+
+export interface CoinTransaction {
+  id: number;
+  customerPhone: string;
+  customerEmail: string | null;
+  customerName: string | null;
+  orderId: number | null;
+  orderNumber: string | null;
+  amountCoins: number;
+  amountPkr: number;
+  type: "earned" | "redeemed" | "admin_grant" | "admin_deduct" | string;
+  status: "approved" | "rejected" | "pending" | string;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface StoreInfo {
   name: string; tagline: string; currency: string; currencySymbol: string;
   supportPhone: string; supportWhatsapp: string; supportEmail: string;
   shipping: { flatRate: number; freeAbove: number; etaDays: string; etaByCity?: Record<string, [number, number]>; etaDefault?: [number, number] };
   cod: { enabled: boolean; fee: number; maxOrderTotal: number; threshold?: number; feeBelow?: number; feeAbove?: number };
   leadCapture?: LeadCaptureConfig;
+  loyalty?: LoyaltyConfig;
   returnsDays: number; cities: string[]; paymentMethods: PaymentMethod[];
 }
 

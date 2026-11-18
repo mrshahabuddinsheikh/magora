@@ -676,4 +676,36 @@ export const leadCaptureSettings = mysqlTable("lead_capture_settings", {
   delaySeconds: int("delay_seconds").notNull().default(10),
 });
 
+/* ───────────── Magora Coins & Loyalty Rewards Settings ───────────── */
+
+export const loyaltySettings = mysqlTable("loyalty_settings", {
+  id: int("id").primaryKey().autoincrement(),
+  enabled: boolean("enabled").notNull().default(true),
+  coinRatePct: int("coin_rate_pct").notNull().default(5), // e.g. 5% cashback
+  coinValuePkr: int("coin_value_pkr").notNull().default(1), // 1 coin = Rs. 1
+  minOrderPkr: int("min_order_pkr").notNull().default(0), // Min order value to earn coins
+  customBadgeTemplate: varchar("custom_badge_template", { length: 255 })
+    .notNull()
+    .default("Earn {coins} Magora Coins (Rs. {discount} discount on your next order)"),
+  termsNotice: text("terms_notice").notNull(),
+});
+
+/* ───────────── Customer Coins Transactions / Ledger ───────────── */
+
+export const coinTransactions = mysqlTable("coin_transactions", {
+  id: int("id").primaryKey().autoincrement(),
+  customerPhone: varchar("customer_phone", { length: 32 }).notNull(),
+  customerEmail: varchar("customer_email", { length: 128 }),
+  customerName: varchar("customer_name", { length: 128 }),
+  orderId: int("order_id"),
+  orderNumber: varchar("order_number", { length: 64 }),
+  amountCoins: int("amount_coins").notNull(),
+  amountPkr: int("amount_pkr").notNull(),
+  type: varchar("type", { length: 32 }).notNull().default("earned"), // "earned" | "redeemed" | "admin_grant" | "admin_deduct"
+  status: varchar("status", { length: 32 }).notNull().default("approved"), // "approved" | "rejected" | "pending"
+  notes: varchar("notes", { length: 255 }),
+  ...timestamps,
+});
+
+
 

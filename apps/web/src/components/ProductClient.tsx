@@ -19,7 +19,8 @@ import { useCart } from "@/stores/cart";
 import { usePrefs } from "@/stores/prefs";
 import { cn, money, pctOff } from "@/lib/format";
 import { detectUserDevice } from "@/lib/device-detect";
-import type { Product, ProductModel } from "@/lib/types";
+import { api } from "@/lib/client-api";
+import type { Product, ProductModel, LoyaltyConfig } from "@/lib/types";
 
 const SKIN_SIDES = 300; // keep in sync with store.skinSidesPrice in the API
 
@@ -65,7 +66,22 @@ export function ProductClient({ product: p, delivery }: { product: Product; deli
   const [engravingEnabled, setEngravingEnabled] = useState(false);
   const [engravingText, setEngravingText] = useState("");
   const [engravingFont, setEngravingFont] = useState<"sans" | "serif" | "script">("sans");
+  const [loyalty, setLoyalty] = useState<LoyaltyConfig | null>(null);
+  const [showCoinsModal, setShowCoinsModal] = useState(false);
   const ctaRef = useRef<HTMLDivElement>(null);
+
+  // Load live admin loyalty settings
+  useEffect(() => {
+    let alive = true;
+    api<{ data: LoyaltyConfig }>("/loyalty-settings", { auth: false })
+      .then((res) => {
+        if (alive && res?.data) setLoyalty(res.data);
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   // hydrate selection from URL / remembered phone / real device detection (client only, avoids SSR mismatch)
   useEffect(() => {
@@ -389,12 +405,33 @@ export function ProductClient({ product: p, delivery }: { product: Product; deli
             </div>
 
             {/* Magora Coins Loyalty Reward */}
-            <div className="mt-2 flex items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 rounded-lg bg-amber-500/10 border border-amber-500/20 px-2.5 py-1 text-xs font-bold text-amber-700 dark:text-amber-400">
-                <span>🪙</span>
-                <span>Earn {Math.round(price * 0.05)} Magora Coins (Rs. {Math.round(price * 0.05)} discount on your next order)</span>
-              </span>
-            </div>
+            {loyalty?.enabled !== false && (() => {
+              const rate = loyalty?.coinRatePct ?? 5;
+              const coinVal = loyalty?.coinValuePkr ?? 1;
+              const minOrder = loyalty?.minOrderPkr ?? 0;
+              const earnedCoins = price >= minOrder ? Math.round(price * (rate / 100)) : 0;
+              if (earnedCoins <= 0) return null;
+              const discountPkr = earnedCoins * coinVal;
+              const template = loyalty?.customBadgeTemplate || "Earn {coins} Magora Coins (Rs. {discount} discount on your next order)";
+              const badgeText = template.replace("{coins}", String(earnedCoins)).replace("{discount}", String(discountPkr));
+
+              return (
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <span className="inline-flex items-center gap-1.5 rounded-lg bg-amber-500/10 border border-amber-500/20 px-2.5 py-1 text-xs font-bold text-amber-700 dark:text-amber-400">
+                    <span>🪙</span>
+                    <span>{badgeText}</span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setShowCoinsModal(true)}
+                    className="text-[11px] font-semibold text-muted hover:text-ink underline cursor-pointer"
+                    title="View Magora Coins Terms & Conditions"
+                  >
+                    T&Cs apply
+                  </button>
+                </div>
+              );
+            })()}
 
             {/* step 1 */}
             <div className="mt-5">
@@ -817,6 +854,76 @@ export function ProductClient({ product: p, delivery }: { product: Product; deli
           </div>
         )}
       </div>
+
+      {/* Magora Coins Terms & Conditions Modal */}
+      {showCoinsModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200"
+          onClick={() => setShowCoinsModal(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="card max-w-lg w-full p-5 sm:p-6 rounded-[28px] shadow-2xl animate-in zoom-in-95 duration-200 bg-white dark:bg-[#151821] border border-black/10 dark:border-white/15 space-y-4"
+          >
+            <div className="flex items-center justify-between pb-3 border-b border-line">
+              <div className="flex items-center gap-2">
+                <span className="text-xl">🪙</span>
+                <h3 className="text-lg font-bold text-ink">Magora Coins & Loyalty Terms</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowCoinsModal(false)}
+                className="grid h-8 w-8 place-items-center rounded-full hover:bg-black/5 dark:hover:bg-white/10 text-muted hover:text-ink transition"
+                aria-label="Close"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="space-y-3 text-sm text-muted leading-relaxed">
+              <div className="rounded-2xl bg-amber-500/10 border border-amber-500/20 p-3.5 text-xs text-amber-900 dark:text-amber-200 space-y-1.5 font-medium">
+                <div className="font-bold flex items-center gap-1.5 text-amber-950 dark:text-amber-100">
+                  <span>⚖️</span>
+                  <span>Cancellation & Discretionary Rights</span>
+                </div>
+                <p>
+                  {loyalty?.termsNotice ||
+                    "Magora reserves the absolute and unilateral right to modify, suspend, decline, cancel, or revoke any Magora Coins or reward discounts on any order at any time without prior notice (including suspected abuse, commercial reselling, returns, or order cancellations)."}
+                </p>
+              </div>
+
+              <div className="space-y-2 pt-1 text-xs">
+                <div className="flex items-start gap-2">
+                  <span className="font-bold text-ink">1.</span>
+                  <span>Coins are automatically calculated on eligible items and credited after successful delivery.</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="font-bold text-ink">2.</span>
+                  <span>1 Magora Coin equals Rs. {loyalty?.coinValuePkr ?? 1} discount applicable on your subsequent purchases.</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="font-bold text-ink">3.</span>
+                  <span>Returned or cancelled orders immediately forfeit any coins earned on those items.</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="font-bold text-ink">4.</span>
+                  <span>Coins hold zero cash value, cannot be withdrawn, and cannot be transferred to third-party accounts.</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-2 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setShowCoinsModal(false)}
+                className="btn btn-primary h-10 px-5 text-xs font-bold"
+              >
+                Understood
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

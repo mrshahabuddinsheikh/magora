@@ -90,6 +90,76 @@ export async function getLeadCaptureSettings(tx: Tx = db) {
   };
 }
 
+let loyaltyTableChecked = false;
+async function ensureLoyaltyTables(tx: Tx = db) {
+  if (loyaltyTableChecked) return;
+  try {
+    await tx.execute(sql`
+      CREATE TABLE IF NOT EXISTS \`loyalty_settings\` (
+        \`id\` INT PRIMARY KEY AUTO_INCREMENT,
+        \`enabled\` BOOLEAN NOT NULL DEFAULT TRUE,
+        \`coin_rate_pct\` INT NOT NULL DEFAULT 5,
+        \`coin_value_pkr\` INT NOT NULL DEFAULT 1,
+        \`min_order_pkr\` INT NOT NULL DEFAULT 0,
+        \`custom_badge_template\` VARCHAR(255) NOT NULL DEFAULT 'Earn {coins} Magora Coins (Rs. {discount} discount on your next order)',
+        \`terms_notice\` TEXT NOT NULL
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+    await tx.execute(sql`
+      CREATE TABLE IF NOT EXISTS \`coin_transactions\` (
+        \`id\` INT PRIMARY KEY AUTO_INCREMENT,
+        \`customer_phone\` VARCHAR(32) NOT NULL,
+        \`customer_email\` VARCHAR(128),
+        \`customer_name\` VARCHAR(128),
+        \`order_id\` INT,
+        \`order_number\` VARCHAR(64),
+        \`amount_coins\` INT NOT NULL,
+        \`amount_pkr\` INT NOT NULL,
+        \`type\` VARCHAR(32) NOT NULL DEFAULT 'earned',
+        \`status\` VARCHAR(32) NOT NULL DEFAULT 'approved',
+        \`notes\` VARCHAR(255),
+        \`created_at\` TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+        \`updated_at\` TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+        INDEX idx_customer_phone (\`customer_phone\`),
+        INDEX idx_order_number (\`order_number\`)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+    loyaltyTableChecked = true;
+  } catch (err) {
+    console.warn("Failed ensuring loyalty tables:", err);
+  }
+}
+
+export async function getLoyaltySettings(tx: Tx = db) {
+  await ensureLoyaltyTables(tx);
+  try {
+    const [row] = await tx.select().from(s.loyaltySettings).where(eq(s.loyaltySettings.id, 1));
+    if (row) return row;
+    const defaultData = {
+      id: 1,
+      enabled: true,
+      coinRatePct: 5,
+      coinValuePkr: 1,
+      minOrderPkr: 0,
+      customBadgeTemplate: "Earn {coins} Magora Coins (Rs. {discount} discount on your next order)",
+      termsNotice:
+        "Magora Coins are promotional loyalty rewards provided at Magora's sole discretion. Magora reserves the absolute right to modify, suspend, reject, cancel, or revoke any Magora Coins, rewards, or discounts earned or redeemed on any order at its sole discretion without prior notice (including suspected abuse, cancellations, or returns). Coins hold no cash redemption value outside the platform.",
+    };
+    await tx.insert(s.loyaltySettings).values(defaultData);
+    return defaultData;
+  } catch {}
+  return {
+    id: 1,
+    enabled: true,
+    coinRatePct: 5,
+    coinValuePkr: 1,
+    minOrderPkr: 0,
+    customBadgeTemplate: "Earn {coins} Magora Coins (Rs. {discount} discount on your next order)",
+    termsNotice:
+      "Magora Coins are promotional loyalty rewards provided at Magora's sole discretion. Magora reserves the absolute right to modify, suspend, reject, cancel, or revoke any Magora Coins, rewards, or discounts earned or redeemed on any order at its sole discretion without prior notice (including suspected abuse, cancellations, or returns). Coins hold no cash redemption value outside the platform.",
+  };
+}
+
 export function computeCodFee(subtotalAfterDiscount: number, settings: { enabled: boolean; threshold: number; feeBelow: number; feeAbove: number }) {
   if (!settings.enabled) return 0;
   return subtotalAfterDiscount < settings.threshold ? settings.feeBelow : settings.feeAbove;

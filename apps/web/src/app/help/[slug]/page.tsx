@@ -46,6 +46,7 @@ const PAGES: Record<string, { title: string; body: string[] }> = {
       "Product colours in the 3D preview are as accurate as possible but may vary slightly by screen.",
       "We reserve the right to cancel orders in case of pricing errors or stock issues — you will be informed right away.",
       "MagSafe is a trademark of Apple Inc. Our cases are MagSafe-compatible and are not made or endorsed by Apple, Samsung or Google.",
+      "Magora Coins & Loyalty Rewards: Magora Coins, cashback points, and promotional rewards are granted at the sole discretion of Magora. Magora reserves the absolute and unilateral right to modify, suspend, decline, cancel, or revoke any Magora Coins or reward discounts on any order at any time without prior notice (including suspected abuse, commercial reselling, returns, or order cancellations). Coins possess no cash value and cannot be withdrawn or exchanged for currency.",
     ],
   },
   about: {

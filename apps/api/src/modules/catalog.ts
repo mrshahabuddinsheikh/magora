@@ -8,7 +8,7 @@ import { notFound } from "../lib/errors";
 import { normalize } from "../lib/text";
 import { store } from "../config";
 import { paymentMethods } from "../payments";
-import { getCodSettings, getLeadCaptureSettings } from "./cart";
+import { getCodSettings, getLeadCaptureSettings, getLoyaltySettings } from "./cart";
 import { phoneDetails } from "../lib/phoneDetails";
 import type { CameraSpec } from "../lib/types";
 
@@ -150,7 +150,7 @@ export async function catalogRoutes(app: FastifyInstance) {
   /* store settings for apps */
   app.get("/store", { schema: { tags: ["Store"], summary: "Store settings: currency, shipping, cities, payment methods" } }, async (_req, reply) => {
     reply.header("cache-control", CACHE_HEADER);
-    const [codSettings, leadCapture] = await Promise.all([getCodSettings(), getLeadCaptureSettings()]);
+    const [codSettings, leadCapture, loyalty] = await Promise.all([getCodSettings(), getLeadCaptureSettings(), getLoyaltySettings()]);
     return {
       data: {
         ...store,
@@ -162,6 +162,7 @@ export async function catalogRoutes(app: FastifyInstance) {
           feeAbove: codSettings.feeAbove,
         },
         leadCapture,
+        loyalty,
         paymentMethods: paymentMethods(),
       },
     };
@@ -172,6 +173,13 @@ export async function catalogRoutes(app: FastifyInstance) {
     reply.header("cache-control", CACHE_HEADER);
     const leadCapture = await getLeadCaptureSettings();
     return { data: leadCapture };
+  });
+
+  /* public loyalty / magora coins settings */
+  app.get("/loyalty-settings", { schema: { tags: ["Store"], summary: "Public Magora Coins & Loyalty settings" } }, async (_req, reply) => {
+    reply.header("cache-control", CACHE_HEADER);
+    const loyalty = await getLoyaltySettings();
+    return { data: loyalty };
   });
 
   /* brands with their models — powers the brand → model picker */

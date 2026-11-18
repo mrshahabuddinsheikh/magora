@@ -10,7 +10,7 @@ import { revalidateWeb } from "../lib/revalidate";
 import { phoneSearchText, slugify } from "../lib/text";
 import { ORDER_STATUSES } from "../lib/types";
 import { STATUS_LABEL, loadOrder, presentOrder, restock } from "./orders";
-import { getCodSettings, getLeadCaptureSettings } from "./cart";
+import { getCodSettings, getLeadCaptureSettings, getLoyaltySettings } from "./cart";
 import { adminReturnRoutes } from "./returns";
 import { addShipmentEvent, stampsFor, upsertShipment } from "./tracking";
 import { SHIPMENT_STATUSES, type ShipmentStatus } from "../lib/types";
@@ -1538,6 +1538,202 @@ export async function adminRoutes(app: FastifyInstance) {
       invalidate("store");
       invalidate("lead_capture");
       return { data: { id: 1, ...body } };
+    },
+  );
+
+  /* ───────────── Loyalty Rewards / Magora Coins Admin ───────────── */
+
+  app.get("/loyalty-settings", { schema: { tags, security } }, async () => {
+    const settings = await getLoyaltySettings();
+    return { data: settings };
+  });
+
+  app.post(
+    "/loyalty-settings",
+    {
+      schema: {
+        tags,
+        security,
+        body: Type.Object({
+          enabled: Type.Boolean(),
+          coinRatePct: Type.Integer({ minimum: 0, maximum: 100 }),
+          coinValuePkr: Type.Integer({ minimum: 1, maximum: 1000 }),
+          minOrderPkr: Type.Integer({ minimum: 0 }),
+          customBadgeTemplate: Type.String({ minLength: 5, maxLength: 255 }),
+          termsNotice: Type.String({ minLength: 10 }),
+        }),
+      },
+    },
+    async (req) => {
+      const body = req.body as {
+        enabled: boolean;
+        coinRatePct: number;
+        coinValuePkr: number;
+        minOrderPkr: number;
+        customBadgeTemplate: string;
+        termsNotice: string;
+      };
+      await getLoyaltySettings();
+      const [existing] = await db.select().from(s.loyaltySettings).where(eq(s.loyaltySettings.id, 1));
+      if (existing) {
+        await db
+          .update(s.loyaltySettings)
+          .set(body)
+          .where(eq(s.loyaltySettings.id, 1));
+      } else {
+        await db
+          .insert(s.loyaltySettings)
+          .values({ id: 1, ...body });
+      }
+      invalidate("store");
+      invalidate("loyalty");
+      return { data: { id: 1, ...body } };
+    },
+  );
+
+  app.get(
+    "/loyalty-ledger",
+    {
+      schema: {
+        tags,
+        security,
+        querystring: Type.Object({
+          q: Type.Optional(Type.String()),
+          status: Type.Optional(Type.String()),
+          page: Type.Optional(Type.Integer({ minimum: 1 })),
+          limit: Type.Optional(Type.Integer({ minimum: 1, maximum: 100 })),
+        }),
+      },
+    },
+    async (req) => {
+      const { q, status, page = 1, limit = 50 } = req.query as {
+        q?: string;
+        status?: string;
+        page?: number;
+        limit?: number;
+      };
+      const offset = (page - 1) * limit;
+
+      const conditions = [];
+      if (status && status !== "all") {
+        conditions.push(eq(s.coinTransactions.status, status));
+      }
+      if (q && q.trim()) {
+        const needle = `%${q.trim()}%`;
+        conditions.push(
+          or(
+            like(s.coinTransactions.customerPhone, needle),
+            like(s.coinTransactions.customerName, needle),
+            like(s.coinTransactions.customerEmail, needle),
+            like(s.coinTransactions.orderNumber, needle),
+          ),
+        );
+      }
+
+      const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+      const [items, countResult, allSummary] = await Promise.all([
+        db
+          .select()
+          .from(s.coinTransactions)
+          .where(whereClause)
+          .orderBy(desc(s.coinTransactions.createdAt))
+          .limit(limit)
+          .offset(offset),
+        db
+          .select({ count: sql<number>`count(*)` })
+          .from(s.coinTransactions)
+          .where(whereClause),
+        db
+          .select({
+            totalEarned: sql<number>`COALESCE(SUM(CASE WHEN ${s.coinTransactions.amountCoins} > 0 AND ${s.coinTransactions.status} = 'approved' THEN ${s.coinTransactions.amountCoins} ELSE 0 END), 0)`,
+            totalRedeemed: sql<number>`COALESCE(SUM(CASE WHEN ${s.coinTransactions.amountCoins} < 0 AND ${s.coinTransactions.status} = 'approved' THEN ABS(${s.coinTransactions.amountCoins}) ELSE 0 END), 0)`,
+            pendingCoins: sql<number>`COALESCE(SUM(CASE WHEN ${s.coinTransactions.status} = 'pending' THEN ${s.coinTransactions.amountCoins} ELSE 0 END), 0)`,
+            rejectedCoins: sql<number>`COALESCE(SUM(CASE WHEN ${s.coinTransactions.status} = 'rejected' THEN ${s.coinTransactions.amountCoins} ELSE 0 END), 0)`,
+          })
+          .from(s.coinTransactions),
+      ]);
+
+      const total = Number(countResult[0]?.count ?? 0);
+      return {
+        data: items,
+        meta: {
+          total,
+          page,
+          limit,
+          totalPages: Math.ceil(total / limit),
+        },
+        summary: allSummary[0] ?? {
+          totalEarned: 0,
+          totalRedeemed: 0,
+          pendingCoins: 0,
+          rejectedCoins: 0,
+        },
+      };
+    },
+  );
+
+  app.post(
+    "/loyalty-ledger/:id/status",
+    {
+      schema: {
+        tags,
+        security,
+        params: Type.Object({ id: Type.Integer() }),
+        body: Type.Object({
+          status: Type.Union([Type.Literal("approved"), Type.Literal("rejected"), Type.Literal("pending")]),
+          notes: Type.Optional(Type.String({ maxLength: 255 })),
+        }),
+      },
+    },
+    async (req) => {
+      const { id } = req.params as { id: number };
+      const { status, notes } = req.body as { status: "approved" | "rejected" | "pending"; notes?: string };
+      const updateData: { status: string; notes?: string } = { status };
+      if (notes !== undefined) updateData.notes = notes;
+
+      await db.update(s.coinTransactions).set(updateData).where(eq(s.coinTransactions.id, id));
+      const [updated] = await db.select().from(s.coinTransactions).where(eq(s.coinTransactions.id, id));
+      return { data: updated };
+    },
+  );
+
+  app.post(
+    "/loyalty-ledger/manual-adjustment",
+    {
+      schema: {
+        tags,
+        security,
+        body: Type.Object({
+          customerPhone: Type.String({ minLength: 7, maxLength: 32 }),
+          customerName: Type.Optional(Type.String({ maxLength: 128 })),
+          amountCoins: Type.Integer(),
+          notes: Type.String({ minLength: 2, maxLength: 255 }),
+        }),
+      },
+    },
+    async (req) => {
+      const { customerPhone, customerName, amountCoins, notes } = req.body as {
+        customerPhone: string;
+        customerName?: string;
+        amountCoins: number;
+        notes: string;
+      };
+      const settings = await getLoyaltySettings();
+      const amountPkr = Math.abs(amountCoins) * settings.coinValuePkr;
+      const type = amountCoins >= 0 ? "admin_grant" : "admin_deduct";
+
+      await db.insert(s.coinTransactions).values({
+        customerPhone: customerPhone.trim(),
+        customerName: customerName?.trim() ?? "Valued Customer",
+        amountCoins,
+        amountPkr,
+        type,
+        status: "approved",
+        notes: notes.trim(),
+      });
+
+      return { success: true };
     },
   );
 }
