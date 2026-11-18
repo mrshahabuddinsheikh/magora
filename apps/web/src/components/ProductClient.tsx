@@ -252,7 +252,12 @@ export function ProductClient({ product: p, delivery }: { product: Product; deli
     const ok = await add(variant.id, qty, { name: p.name, model: model.name, color: color.name, hex: color.hex }, custom);
     if (ok) {
       setAdded(true);
-      triggerFlyToBag(ctaRef.current, { name: p.name, colorHex: color.hex, emoji: "📱" });
+      triggerFlyToBag(ctaRef.current, {
+        name: p.name,
+        colorHex: color.hex,
+        emoji: "📱",
+        image: photos[0] || (p as any).images?.[0] || photo?.preview,
+      });
       track("add_to_cart", {
         value: price * qty,
         items: [{ id: variant.id, name: `${p.name} - ${model.name}`, price, qty, category: p.category?.slug }],
@@ -278,7 +283,7 @@ export function ProductClient({ product: p, delivery }: { product: Product; deli
         <section className="lg:sticky lg:top-[92px] lg:self-start">
           <div className="glass relative overflow-hidden rounded-[32px]">
             <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(60%_50%_at_50%_45%,rgba(255,255,255,0.95),transparent_70%)]" />
-            <div className="relative h-[440px] sm:h-[540px] lg:h-[620px]">
+            <div id="product-hero-container" className="relative h-[440px] sm:h-[540px] lg:h-[620px]">
               {slide >= 0 && photos[slide] ? (
                 <button className="block h-full w-full cursor-zoom-in" onClick={() => setZoomAt(slide)} aria-label="Open photo full screen">
                   {/* eslint-disable-next-line @next/next/no-img-element */}

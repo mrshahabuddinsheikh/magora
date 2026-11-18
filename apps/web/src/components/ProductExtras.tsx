@@ -8,6 +8,7 @@ import { ProductCard } from "./ProductCard";
 import { cardPhoto, designFor, viewOf } from "@/lib/view";
 import { useCart } from "@/stores/cart";
 import { useRecent } from "@/stores/recent";
+import { triggerFlyToBag } from "./FlyToBagAnimation";
 import { cn, money } from "@/lib/format";
 import type { Color, Paged, Product, ProductListItem } from "@/lib/types";
 
@@ -272,6 +273,12 @@ export function BoughtTogether({
     } else if (!(await add(current.variantId, 1, { name: p.name, model: model.name, color: current.color.name, hex: current.color.hex }))) return;
     for (const x of chosen) await add(x.variantId, 1, { name: x.item.name, model: model.name, color: x.color.name, hex: x.color.hex });
     setDone(true);
+    triggerFlyToBag(null, {
+      name: `${p.name} Set`,
+      colorHex: current.color.hex,
+      emoji: "🎁",
+      image: (p as any).images?.[0],
+    });
   };
 
 

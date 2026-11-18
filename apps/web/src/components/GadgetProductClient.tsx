@@ -77,7 +77,12 @@ export function GadgetProductClient({ product: p, delivery }: { product: Product
     const ok = await add(variant.id, qty, { name: p.name, model: "", color: color.name, hex: color.hex });
     if (ok) {
       setAdded(true);
-      triggerFlyToBag(null, { name: p.name, colorHex: color.hex, emoji: "⚡" });
+      triggerFlyToBag(null, {
+        name: p.name,
+        colorHex: color.hex,
+        emoji: "⚡",
+        image: p.images[0],
+      });
       track("add_to_cart", {
         value: variant.price * qty,
         items: [{ id: variant.id, name: p.name, price: variant.price, qty, category: "gadgets" }],
@@ -103,7 +108,7 @@ export function GadgetProductClient({ product: p, delivery }: { product: Product
         <section className="lg:sticky lg:top-[92px] lg:self-start">
           <div className="glass relative overflow-hidden rounded-[32px]">
             <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(60%_50%_at_50%_45%,rgba(255,255,255,0.95),transparent_70%)]" />
-            <div className="relative h-[400px] sm:h-[520px] lg:h-[600px]">
+            <div id="product-hero-container" className="relative h-[400px] sm:h-[520px] lg:h-[600px]">
               {slide >= 0 && p.images[slide] ? (
                 <button className="block h-full w-full cursor-zoom-in" onClick={() => setZoomAt(slide)} aria-label="Open photo full screen">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
