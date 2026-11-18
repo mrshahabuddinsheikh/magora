@@ -4,8 +4,9 @@ import { db } from "../db/client";
 import * as s from "../db/schema";
 import { store } from "../config";
 
-function escapeXml(unsafe: string): string {
-  return unsafe
+function escapeXml(unsafe?: string | null): string {
+  if (!unsafe) return "";
+  return String(unsafe)
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
@@ -17,6 +18,8 @@ export async function catalogFeedRoutes(app: FastifyInstance) {
   /* Public XML Feed for Google Merchant Center & Meta (Facebook/Instagram) Catalog */
   app.get("/feed.xml", async (req, reply) => {
     const siteUrl = process.env.PUBLIC_WEB_URL || "https://new.officialhayafoundation.com";
+    const storeName = (store as any)?.name || "Magora";
+    const storeDesc = "MagSafe magnetic phone cases, 3D skins, screen protectors and accessories with Cash on Delivery across Pakistan";
     const activeProducts = await db
       .select({
         id: s.products.id,
@@ -67,9 +70,9 @@ export async function catalogFeedRoutes(app: FastifyInstance) {
     const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:g="http://base.google.com/ns/1.0">
   <channel>
-    <title>${escapeXml(store.name)} Catalog</title>
+    <title>${escapeXml(storeName)} Catalog</title>
     <link>${escapeXml(siteUrl)}</link>
-    <description>${escapeXml(store.description)}</description>
+    <description>${escapeXml(storeDesc)}</description>
 ${itemsXml}
   </channel>
 </rss>`;
