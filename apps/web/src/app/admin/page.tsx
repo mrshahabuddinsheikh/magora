@@ -241,7 +241,7 @@ export default function AdminPage() {
         <div className="crystal rounded-[26px] p-3 shadow-sm border border-black/5 dark:border-white/10 max-h-[calc(100vh-2rem)] flex flex-col">
           <div className="px-2 pb-3 pt-1 flex items-center justify-between">
             <Logo />
-            <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary uppercase tracking-wider">
+            <span className="rounded-full bg-[#3653ff]/10 px-2 py-0.5 text-[10px] font-bold text-[#3653ff] uppercase tracking-wider">
               Admin
             </span>
           </div>
@@ -254,7 +254,7 @@ export default function AdminPage() {
               placeholder="Search tabs..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full rounded-xl bg-black/5 dark:bg-white/5 pl-8 pr-3 py-1.5 text-xs font-medium text-ink outline-none placeholder:text-ink/40 focus:ring-1 focus:ring-primary"
+              className="w-full rounded-xl bg-black/5 dark:bg-white/5 pl-8 pr-3 py-1.5 text-xs font-medium text-ink outline-none placeholder:text-ink/40 focus:ring-1 focus:ring-[#3653ff]"
             />
           </div>
 
@@ -267,7 +267,7 @@ export default function AdminPage() {
                 className={cn(
                   "shrink-0 rounded-full px-3 py-1 text-xs font-semibold transition",
                   mobileCategory === cat.id
-                    ? "bg-primary text-white shadow-sm"
+                    ? "bg-[#3653ff] text-white shadow-sm"
                     : "bg-white/70 dark:bg-white/10 text-ink/70 hover:bg-white"
                 )}
               >
@@ -298,19 +298,19 @@ export default function AdminPage() {
                           key={t.id}
                           onClick={() => go(t.id)}
                           className={cn(
-                            "group flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left text-[13.5px] font-medium transition",
+                            "group flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left text-[13.5px] font-semibold transition",
                             active
-                              ? "bg-primary text-white shadow-sm"
+                              ? "bg-[#3653ff] text-white shadow-md shadow-[#3653ff]/25"
                               : "text-ink/75 hover:bg-white/70 dark:hover:bg-white/10"
                           )}
                         >
-                          <Icon size={16} className={cn("shrink-0", active ? "text-white" : "text-ink/60 group-hover:text-primary")} />
+                          <Icon size={16} className={cn("shrink-0", active ? "text-white" : "text-ink/60 group-hover:text-[#3653ff]")} />
                           <span className="truncate flex-1">{t.label}</span>
                           {badge !== undefined && badge > 0 && (
                             <span
                               className={cn(
                                 "shrink-0 rounded-full px-1.5 py-0.5 text-[10.5px] font-bold leading-none",
-                                active ? "bg-white text-primary" : "bg-[#e11d74] text-white"
+                                active ? "bg-white text-[#3653ff]" : "bg-[#e11d74] text-white"
                               )}
                             >
                               {badge}

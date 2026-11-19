@@ -165,6 +165,12 @@ export async function catalogRoutes(app: FastifyInstance) {
           enabled: codSettings.payoneerEnabled,
         };
       }
+      if (m.id === "jazzcash") {
+        return {
+          ...m,
+          enabled: !!(codSettings.jazzcashEnabled && codSettings.jazzcashMerchantId),
+        };
+      }
       return m;
     });
 
@@ -190,6 +196,16 @@ export async function catalogRoutes(app: FastifyInstance) {
           bankTitle: codSettings.bankTitle,
           bankAccount: codSettings.bankAccount,
           bankIban: codSettings.bankIban,
+        },
+        safepay: {
+          enabled: codSettings.safepayEnabled,
+          apiKey: codSettings.safepayApiKey,
+          env: codSettings.safepayEnv,
+        },
+        jazzcash: {
+          enabled: codSettings.jazzcashEnabled,
+          merchantId: codSettings.jazzcashMerchantId,
+          env: codSettings.jazzcashEnv,
         },
         leadCapture,
         loyalty,

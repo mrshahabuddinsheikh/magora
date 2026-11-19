@@ -6,17 +6,17 @@ import { Truck, CheckCircle2, Sparkles } from "lucide-react";
 interface VanDeliveryAnimationProps {
   orderNumber: string;
   customerName?: string;
+  isCod?: boolean;
+  isPaid?: boolean;
 }
 
-export function VanDeliveryAnimation({ orderNumber, customerName }: VanDeliveryAnimationProps) {
+export function VanDeliveryAnimation({ orderNumber, customerName, isCod = true, isPaid = false }: VanDeliveryAnimationProps) {
   const [stage, setStage] = useState<"loading" | "loaded" | "driving" | "done">("loading");
 
+  const canDispatch = isCod || isPaid;
+
   useEffect(() => {
-    // Stage sequence:
-    // 0s - 1.2s: Parcel hops towards van
-    // 1.2s - 2.2s: Parcel enters van, doors shut
-    // 2.2s - 4.5s: Van accelerates and drives forward
-    // 4.5s+: Status confirmed
+    if (!canDispatch) return;
     const t1 = setTimeout(() => setStage("loaded"), 1400);
     const t2 = setTimeout(() => setStage("driving"), 2400);
     const t3 = setTimeout(() => setStage("done"), 4600);
@@ -26,7 +26,32 @@ export function VanDeliveryAnimation({ orderNumber, customerName }: VanDeliveryA
       clearTimeout(t2);
       clearTimeout(t3);
     };
-  }, []);
+  }, [canDispatch]);
+
+  if (!canDispatch) {
+    return (
+      <div className="relative overflow-hidden rounded-[24px] bg-gradient-to-b from-[#1a1c29] to-[#0f111a] p-5 sm:p-7 text-white shadow-xl border border-amber-500/30 mb-6">
+        <div className="relative z-10 flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-white/10 text-xs">
+          <div className="flex items-center gap-2">
+            <span className="flex h-2.5 w-2.5 rounded-full bg-amber-400 animate-pulse" />
+            <span className="font-bold text-amber-300">Order #{orderNumber} Placed · Awaiting Payment</span>
+          </div>
+          <span className="rounded-full bg-amber-500/20 px-2.5 py-0.5 text-[11px] font-bold text-amber-300">
+            Payment Not Verified Yet
+          </span>
+        </div>
+
+        <div className="py-4 space-y-2">
+          <p className="text-sm font-semibold text-zinc-100 flex items-center gap-2">
+            <span>⚠️</span> Parcel will NOT be dispatched until payment is verified in our bank account.
+          </p>
+          <p className="text-xs text-zinc-400 leading-relaxed">
+            Since Cash on Delivery is currently available in Karachi only, orders for other cities require advance payment. Please complete your transfer and submit your transaction ID or receipt screenshot below.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="relative overflow-hidden rounded-[24px] bg-gradient-to-b from-[#111622] to-[#0a0d14] p-5 sm:p-7 text-white shadow-xl border border-white/10 mb-6">

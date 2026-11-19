@@ -1829,6 +1829,15 @@ export async function adminRoutes(app: FastifyInstance) {
           bankTitle: Type.Optional(Type.String()),
           bankAccount: Type.Optional(Type.String()),
           bankIban: Type.Optional(Type.String()),
+          safepayEnabled: Type.Optional(Type.Boolean()),
+          safepayApiKey: Type.Optional(Type.String()),
+          safepaySecretKey: Type.Optional(Type.String()),
+          safepayEnv: Type.Optional(Type.String()),
+          jazzcashEnabled: Type.Optional(Type.Boolean()),
+          jazzcashMerchantId: Type.Optional(Type.String()),
+          jazzcashPassword: Type.Optional(Type.String()),
+          jazzcashSalt: Type.Optional(Type.String()),
+          jazzcashEnv: Type.Optional(Type.String()),
         }),
       },
     },
@@ -1849,6 +1858,15 @@ export async function adminRoutes(app: FastifyInstance) {
         bankTitle?: string;
         bankAccount?: string;
         bankIban?: string;
+        safepayEnabled?: boolean;
+        safepayApiKey?: string;
+        safepaySecretKey?: string;
+        safepayEnv?: string;
+        jazzcashEnabled?: boolean;
+        jazzcashMerchantId?: string;
+        jazzcashPassword?: string;
+        jazzcashSalt?: string;
+        jazzcashEnv?: string;
       };
 
       const cityRestriction = b.cityRestriction || "selected_only";
@@ -1871,6 +1889,15 @@ export async function adminRoutes(app: FastifyInstance) {
         bankTitle: b.bankTitle || "",
         bankAccount: b.bankAccount || "",
         bankIban: b.bankIban || "",
+        safepayEnabled: b.safepayEnabled ?? false,
+        safepayApiKey: b.safepayApiKey || "",
+        safepaySecretKey: b.safepaySecretKey || "",
+        safepayEnv: b.safepayEnv || "sandbox",
+        jazzcashEnabled: b.jazzcashEnabled ?? false,
+        jazzcashMerchantId: b.jazzcashMerchantId || "",
+        jazzcashPassword: b.jazzcashPassword || "",
+        jazzcashSalt: b.jazzcashSalt || "",
+        jazzcashEnv: b.jazzcashEnv || "sandbox",
       };
 
       const [existing] = await db.select().from(s.codSettings).where(eq(s.codSettings.id, 1));

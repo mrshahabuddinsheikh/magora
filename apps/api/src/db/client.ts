@@ -83,6 +83,33 @@ export async function tuneDatabase() {
       if (!existing.has("bank_iban")) {
         await conn.query(`ALTER TABLE cod_settings ADD COLUMN bank_iban VARCHAR(255) DEFAULT ''`);
       }
+      if (!existing.has("safepay_enabled")) {
+        await conn.query(`ALTER TABLE cod_settings ADD COLUMN safepay_enabled BOOLEAN NOT NULL DEFAULT FALSE`);
+      }
+      if (!existing.has("safepay_api_key")) {
+        await conn.query(`ALTER TABLE cod_settings ADD COLUMN safepay_api_key VARCHAR(255) DEFAULT ''`);
+      }
+      if (!existing.has("safepay_secret_key")) {
+        await conn.query(`ALTER TABLE cod_settings ADD COLUMN safepay_secret_key VARCHAR(255) DEFAULT ''`);
+      }
+      if (!existing.has("safepay_env")) {
+        await conn.query(`ALTER TABLE cod_settings ADD COLUMN safepay_env VARCHAR(32) NOT NULL DEFAULT 'sandbox'`);
+      }
+      if (!existing.has("jazzcash_enabled")) {
+        await conn.query(`ALTER TABLE cod_settings ADD COLUMN jazzcash_enabled BOOLEAN NOT NULL DEFAULT FALSE`);
+      }
+      if (!existing.has("jazzcash_merchant_id")) {
+        await conn.query(`ALTER TABLE cod_settings ADD COLUMN jazzcash_merchant_id VARCHAR(255) DEFAULT ''`);
+      }
+      if (!existing.has("jazzcash_password")) {
+        await conn.query(`ALTER TABLE cod_settings ADD COLUMN jazzcash_password VARCHAR(255) DEFAULT ''`);
+      }
+      if (!existing.has("jazzcash_salt")) {
+        await conn.query(`ALTER TABLE cod_settings ADD COLUMN jazzcash_salt VARCHAR(255) DEFAULT ''`);
+      }
+      if (!existing.has("jazzcash_env")) {
+        await conn.query(`ALTER TABLE cod_settings ADD COLUMN jazzcash_env VARCHAR(32) NOT NULL DEFAULT 'sandbox'`);
+      }
     } catch (e: any) {
       console.warn("Notice checking cod_settings columns:", e?.message);
     }

@@ -671,6 +671,15 @@ export const codSettings = mysqlTable("cod_settings", {
   bankTitle: varchar("bank_title", { length: 255 }).default(""),
   bankAccount: varchar("bank_account", { length: 255 }).default(""),
   bankIban: varchar("bank_iban", { length: 255 }).default(""),
+  safepayEnabled: boolean("safepay_enabled").notNull().default(false),
+  safepayApiKey: varchar("safepay_api_key", { length: 255 }).default(""),
+  safepaySecretKey: varchar("safepay_secret_key", { length: 255 }).default(""),
+  safepayEnv: varchar("safepay_env", { length: 32 }).notNull().default("sandbox"),
+  jazzcashEnabled: boolean("jazzcash_enabled").notNull().default(false),
+  jazzcashMerchantId: varchar("jazzcash_merchant_id", { length: 255 }).default(""),
+  jazzcashPassword: varchar("jazzcash_password", { length: 255 }).default(""),
+  jazzcashSalt: varchar("jazzcash_salt", { length: 255 }).default(""),
+  jazzcashEnv: varchar("jazzcash_env", { length: 32 }).notNull().default("sandbox"),
 });
 
 /* ───────────── Lead Capture Popup & Floating Pill Settings ───────────── */

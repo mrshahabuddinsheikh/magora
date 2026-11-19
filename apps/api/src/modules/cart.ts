@@ -81,6 +81,15 @@ export async function getCodSettings(tx: Tx = db) {
         bankTitle: row.bankTitle || "",
         bankAccount: row.bankAccount || "",
         bankIban: row.bankIban || "",
+        safepayEnabled: row.safepayEnabled ?? false,
+        safepayApiKey: row.safepayApiKey || "",
+        safepaySecretKey: row.safepaySecretKey || "",
+        safepayEnv: row.safepayEnv || "sandbox",
+        jazzcashEnabled: row.jazzcashEnabled ?? false,
+        jazzcashMerchantId: row.jazzcashMerchantId || "",
+        jazzcashPassword: row.jazzcashPassword || "",
+        jazzcashSalt: row.jazzcashSalt || "",
+        jazzcashEnv: row.jazzcashEnv || "sandbox",
       };
     }
   } catch {}
@@ -101,6 +110,15 @@ export async function getCodSettings(tx: Tx = db) {
     bankTitle: "",
     bankAccount: "",
     bankIban: "",
+    safepayEnabled: false,
+    safepayApiKey: "",
+    safepaySecretKey: "",
+    safepayEnv: "sandbox",
+    jazzcashEnabled: false,
+    jazzcashMerchantId: "",
+    jazzcashPassword: "",
+    jazzcashSalt: "",
+    jazzcashEnv: "sandbox",
   };
 }
 

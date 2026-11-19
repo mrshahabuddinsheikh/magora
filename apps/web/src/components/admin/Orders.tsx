@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import { Copy, Download, ExternalLink, MessageCircle, Printer, RefreshCw, Truck, Zap } from "lucide-react";
+import { Check, Copy, Download, ExternalLink, MessageCircle, Printer, RefreshCw, Truck, Zap } from "lucide-react";
 import { api, tokenStore } from "@/lib/client-api";
 import { PUBLIC_API_URL, SITE_URL } from "@/lib/config";
 import { cn, dateTime, money } from "@/lib/format";
@@ -151,6 +151,45 @@ export function Orders({ initial }: { initial?: string }) {
                     {s.replace(/_/g, " ")}
                   </button>
                 ))}
+              </div>
+
+              {/* Payment Verification & Status Controls */}
+              <div className="mt-4 pt-3 border-t border-line flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <span className="text-xs font-bold uppercase tracking-wider text-muted">Payment Verification</span>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className={cn(
+                      "rounded-full px-2.5 py-0.5 text-xs font-bold",
+                      open.paymentStatus === "paid" ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300" : "bg-amber-500/15 text-amber-700 dark:text-amber-300"
+                    )}>
+                      {open.paymentStatus === "paid" ? "✓ Paid / Verified" : "⚠️ Unverified / Awaiting Bank Receipt"}
+                    </span>
+                    <span className="text-xs text-muted">({open.paymentMethod})</span>
+                  </div>
+                </div>
+                {open.paymentStatus !== "paid" ? (
+                  <button
+                    onClick={async () => {
+                      await api(`/admin/orders/${open.number}`, { method: "PATCH", json: { paymentStatus: "paid", status: "confirmed", note: "Payment verified by admin" } });
+                      openOrder(open.number);
+                      load();
+                    }}
+                    className="chip h-8 text-xs font-bold text-success border-success/40 hover:bg-success/10 flex items-center gap-1"
+                  >
+                    <Check size={13} /> Verify & Mark as Paid
+                  </button>
+                ) : (
+                  <button
+                    onClick={async () => {
+                      await api(`/admin/orders/${open.number}`, { method: "PATCH", json: { paymentStatus: "unpaid", note: "Payment status reset to unpaid" } });
+                      openOrder(open.number);
+                      load();
+                    }}
+                    className="chip h-8 text-xs text-muted hover:text-danger"
+                  >
+                    Mark as Unpaid
+                  </button>
+                )}
               </div>
             </div>
             <ShipmentPanel order={open} onChange={(o) => { setOpen(o); load(); }} />

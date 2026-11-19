@@ -155,6 +155,16 @@ export interface StoreInfo {
     bankAccount?: string;
     bankIban?: string;
   };
+  safepay?: {
+    enabled: boolean;
+    apiKey?: string;
+    env?: string;
+  };
+  jazzcash?: {
+    enabled: boolean;
+    merchantId?: string;
+    env?: string;
+  };
   leadCapture?: LeadCaptureConfig;
   loyalty?: LoyaltyConfig;
   returnsDays: number; cities: string[]; paymentMethods: PaymentMethod[];

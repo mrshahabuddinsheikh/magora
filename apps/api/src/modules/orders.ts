@@ -577,12 +577,18 @@ export async function orderRoutes(app: FastifyInstance) {
     async (req) => {
       const { number } = req.params as { number: string };
       const { reference, notes } = req.body as { reference: string; notes?: string };
+      const clean = reference.trim();
+      const dummy = ["123", "1234", "12345", "123456", "12345678", "abcd", "abcde", "asdf", "test", "demo", "none", "fake", "0000", "1111"];
+      if (clean.length < 6 || dummy.includes(clean.toLowerCase())) {
+        throw badRequest("Invalid transaction reference. Please enter the actual Transaction ID from your banking or JazzCash/Easypaisa app.", "invalid_reference");
+      }
+
       const [o] = await db.select().from(s.orders).where(eq(s.orders.number, number));
       if (!o) throw notFound("Order not found");
 
       const updateText = notes
-        ? `${o.notes ? o.notes + " | " : ""}Payment Ref: ${reference} (${notes})`
-        : `${o.notes ? o.notes + " | " : ""}Payment Ref: ${reference}`;
+        ? `${o.notes ? o.notes + " | " : ""}Payment Ref: ${clean} (${notes})`
+        : `${o.notes ? o.notes + " | " : ""}Payment Ref: ${clean}`;
 
       await db
         .update(s.orders)

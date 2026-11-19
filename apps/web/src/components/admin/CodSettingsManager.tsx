@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { AlertCircle, Banknote, Check, CreditCard, DollarSign, Globe, Info, MapPin, Plus, RefreshCw, Save, ShieldCheck, Sparkles, Trash2, X } from "lucide-react";
+import { AlertCircle, Banknote, Check, CreditCard, DollarSign, ExternalLink, Globe, HelpCircle, Info, Lock, MapPin, Plus, RefreshCw, Save, ShieldCheck, Sparkles, Trash2, Wallet, X } from "lucide-react";
 import { api } from "@/lib/client-api";
 import { money, cn } from "@/lib/format";
 
@@ -22,6 +22,15 @@ interface CodSettings {
   bankTitle?: string;
   bankAccount?: string;
   bankIban?: string;
+  safepayEnabled?: boolean;
+  safepayApiKey?: string;
+  safepaySecretKey?: string;
+  safepayEnv?: "sandbox" | "production";
+  jazzcashEnabled?: boolean;
+  jazzcashMerchantId?: string;
+  jazzcashPassword?: string;
+  jazzcashSalt?: string;
+  jazzcashEnv?: "sandbox" | "production";
 }
 
 const PAKISTAN_MAJOR_CITIES = [
@@ -55,6 +64,15 @@ export function CodSettingsManager() {
     bankTitle: "",
     bankAccount: "",
     bankIban: "",
+    safepayEnabled: false,
+    safepayApiKey: "",
+    safepaySecretKey: "",
+    safepayEnv: "sandbox",
+    jazzcashEnabled: false,
+    jazzcashMerchantId: "",
+    jazzcashPassword: "",
+    jazzcashSalt: "",
+    jazzcashEnv: "sandbox",
   });
 
   const [newCityInput, setNewCityInput] = useState("");
@@ -80,6 +98,15 @@ export function CodSettingsManager() {
             bankTitle: res.data.bankTitle || "",
             bankAccount: res.data.bankAccount || "",
             bankIban: res.data.bankIban || "",
+            safepayEnabled: res.data.safepayEnabled ?? false,
+            safepayApiKey: res.data.safepayApiKey || "",
+            safepaySecretKey: res.data.safepaySecretKey || "",
+            safepayEnv: res.data.safepayEnv || "sandbox",
+            jazzcashEnabled: res.data.jazzcashEnabled ?? false,
+            jazzcashMerchantId: res.data.jazzcashMerchantId || "",
+            jazzcashPassword: res.data.jazzcashPassword || "",
+            jazzcashSalt: res.data.jazzcashSalt || "",
+            jazzcashEnv: res.data.jazzcashEnv || "sandbox",
           });
         }
       })
@@ -116,6 +143,15 @@ export function CodSettingsManager() {
           bankTitle: settings.bankTitle || "",
           bankAccount: settings.bankAccount || "",
           bankIban: settings.bankIban || "",
+          safepayEnabled: settings.safepayEnabled ?? false,
+          safepayApiKey: settings.safepayApiKey || "",
+          safepaySecretKey: settings.safepaySecretKey || "",
+          safepayEnv: settings.safepayEnv || "sandbox",
+          jazzcashEnabled: settings.jazzcashEnabled ?? false,
+          jazzcashMerchantId: settings.jazzcashMerchantId || "",
+          jazzcashPassword: settings.jazzcashPassword || "",
+          jazzcashSalt: settings.jazzcashSalt || "",
+          jazzcashEnv: settings.jazzcashEnv || "sandbox",
         },
       });
       if (res.data) {
@@ -124,7 +160,7 @@ export function CodSettingsManager() {
           allowedCities: Array.isArray(res.data.allowedCities) ? res.data.allowedCities : ["Karachi"],
         });
       }
-      setMsg({ type: "success", text: "✓ COD Rules, City Restrictions & Payoneer Gateways saved successfully!" });
+      setMsg({ type: "success", text: "✓ COD Rules, City Restrictions, and Payment Gateways saved successfully!" });
       setTimeout(() => setMsg(null), 4000);
     } catch (err) {
       setMsg({ type: "error", text: (err as Error).message || "Failed to update settings" });
@@ -171,7 +207,7 @@ export function CodSettingsManager() {
             <div>
               <h2 className="text-xl font-bold tracking-tight text-ink">Cash on Delivery (COD) & Online Payment Control</h2>
               <p className="mt-1 text-sm text-muted">
-                Control COD city availability (e.g. Karachi only vs Nationwide), tiered courier handling fees, and Payoneer advance payment gateway.
+                Control COD city availability (Karachi only vs Nationwide), advance bank transfer settings, and automated card/wallet payment gateways.
               </p>
             </div>
           </div>
@@ -417,17 +453,17 @@ export function CodSettingsManager() {
             </div>
           </div>
 
-          {/* Section 2: Payoneer & Online Payment Gateway */}
+          {/* Section 2: Direct Pakistani Bank Transfer & Advance Payment */}
           <div className="card p-5 sm:p-7 space-y-5">
             <h3 className="text-base font-bold text-ink flex items-center gap-2 border-b border-line pb-3">
-              <CreditCard size={18} className="text-accent" /> Payoneer & Online Payment Gateway
+              <CreditCard size={18} className="text-[#3653ff]" /> Direct Bank Transfer / Advance Payment (Pakistan)
             </h3>
 
-            {/* Payoneer Enable Toggle */}
+            {/* Toggle */}
             <div className="flex items-center justify-between p-4 rounded-2xl bg-black/[0.03] dark:bg-white/[0.03] border border-line">
               <div>
-                <b className="block text-sm font-bold text-ink">Enable Online Payment Gateway (Payoneer / Bank)</b>
-                <p className="text-xs text-muted mt-0.5">Allows non-Karachi and advance-paying customers to pay online.</p>
+                <b className="block text-sm font-bold text-ink">Enable Advance Bank Transfer Gateway</b>
+                <p className="text-xs text-muted mt-0.5">Allows non-Karachi customers to pay via IBFT / Bank Transfer.</p>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
                 <input
@@ -436,40 +472,51 @@ export function CodSettingsManager() {
                   onChange={(e) => setSettings({ ...settings, payoneerEnabled: e.target.checked })}
                   className="sr-only peer"
                 />
-                <div className="w-11 h-6 bg-black/20 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent"></div>
+                <div className="w-11 h-6 bg-black/20 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#3653ff]"></div>
               </label>
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-1">
-                <label className="label text-xs font-bold text-ink">Gateway Display Title</label>
+                <label className="label text-xs font-bold text-ink">Display Title</label>
                 <input
                   type="text"
                   value={settings.payoneerTitle}
                   onChange={(e) => setSettings({ ...settings, payoneerTitle: e.target.value })}
-                  placeholder="e.g. Payoneer / Card / Online Payment"
+                  placeholder="e.g. Online Bank Transfer (IBFT)"
                   className="input text-xs"
                 />
               </div>
 
               <div className="space-y-1">
-                <label className="label text-xs font-bold text-ink">Payoneer Account Email</label>
+                <label className="label text-xs font-bold text-ink">Bank Name & Title</label>
                 <input
-                  type="email"
-                  value={settings.payoneerEmail}
-                  onChange={(e) => setSettings({ ...settings, payoneerEmail: e.target.value })}
-                  placeholder="e.g. payments@magora.pk"
+                  type="text"
+                  value={settings.bankTitle}
+                  onChange={(e) => setSettings({ ...settings, bankTitle: e.target.value })}
+                  placeholder="e.g. Meezan Bank - Magora"
+                  className="input text-xs"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="label text-xs font-bold text-ink">Account Number</label>
+                <input
+                  type="text"
+                  value={settings.bankAccount}
+                  onChange={(e) => setSettings({ ...settings, bankAccount: e.target.value })}
+                  placeholder="e.g. 010203040506"
                   className="input text-xs font-mono"
                 />
               </div>
 
-              <div className="space-y-1 sm:col-span-2">
-                <label className="label text-xs font-bold text-ink">Payoneer Direct Payment Link (Optional)</label>
+              <div className="space-y-1">
+                <label className="label text-xs font-bold text-ink">IBAN (24 Characters)</label>
                 <input
-                  type="url"
-                  value={settings.payoneerLink}
-                  onChange={(e) => setSettings({ ...settings, payoneerLink: e.target.value })}
-                  placeholder="https://payoneer.me/..."
+                  type="text"
+                  value={settings.bankIban}
+                  onChange={(e) => setSettings({ ...settings, bankIban: e.target.value })}
+                  placeholder="PK..."
                   className="input text-xs font-mono"
                 />
               </div>
@@ -480,45 +527,152 @@ export function CodSettingsManager() {
                   rows={2}
                   value={settings.payoneerInstructions}
                   onChange={(e) => setSettings({ ...settings, payoneerInstructions: e.target.value })}
-                  placeholder="Instructions displayed to customers during checkout and on their order status page..."
+                  placeholder="Transfer order amount via your bank app (Meezan, HBL, etc.) or JazzCash/Easypaisa. Share receipt on WhatsApp."
                   className="input w-full text-xs p-2.5 resize-none"
                 />
               </div>
             </div>
+          </div>
 
-            {/* Bank details */}
-            <div className="rounded-2xl border border-line bg-black/[0.02] dark:bg-white/[0.02] p-4 space-y-3">
-              <h4 className="text-xs font-bold text-ink uppercase tracking-wider">
-                Direct Pakistani Bank Transfer Details (Optional)
-              </h4>
-              <div className="grid gap-3 sm:grid-cols-3">
-                <div className="space-y-1">
-                  <label className="label text-xs font-semibold text-ink">Bank & Account Title</label>
-                  <input
-                    type="text"
-                    value={settings.bankTitle}
-                    onChange={(e) => setSettings({ ...settings, bankTitle: e.target.value })}
-                    placeholder="e.g. Meezan Bank - Magora"
-                    className="input text-xs"
-                  />
+          {/* Section 3: Automated Pakistani Payment Gateways (Safepay & JazzCash) */}
+          <div className="card p-5 sm:p-7 space-y-6">
+            <div className="border-b border-line pb-3">
+              <h3 className="text-base font-bold text-ink flex items-center gap-2">
+                <Lock size={18} className="text-emerald-600" /> Automated Pakistani Payment Gateways (Card + PIN/OTP)
+              </h3>
+              <p className="text-xs text-muted mt-1">
+                Customers enter their Debit/Credit Card or Mobile Wallet PIN; the bank automatically deducts payment and confirms the order with zero fake TID risk.
+              </p>
+            </div>
+
+            {/* Safepay (Debit Cards, Credit Cards, PayPak, 1Link) */}
+            <div className="rounded-2xl border border-line bg-black/[0.02] dark:bg-white/[0.02] p-4 sm:p-5 space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <span className="grid h-8 w-8 place-items-center rounded-xl bg-blue-500 text-white font-black text-xs">
+                    SP
+                  </span>
+                  <div>
+                    <b className="block text-sm font-bold text-ink">Safepay Payment Gateway (Pakistan's Stripe)</b>
+                    <span className="text-xs text-muted">Supports all Pakistani Debit/Credit cards (Visa, Mastercard, PayPak) + OTP verification.</span>
+                  </div>
                 </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={settings.safepayEnabled}
+                    onChange={(e) => setSettings({ ...settings, safepayEnabled: e.target.checked })}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-black/20 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                </label>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2 pt-1">
                 <div className="space-y-1">
-                  <label className="label text-xs font-semibold text-ink">Account Number</label>
+                  <label className="label text-xs font-semibold text-ink">Safepay API Key</label>
                   <input
                     type="text"
-                    value={settings.bankAccount}
-                    onChange={(e) => setSettings({ ...settings, bankAccount: e.target.value })}
-                    placeholder="e.g. 010203040506"
+                    value={settings.safepayApiKey}
+                    onChange={(e) => setSettings({ ...settings, safepayApiKey: e.target.value })}
+                    placeholder="sec_..."
                     className="input text-xs font-mono"
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="label text-xs font-semibold text-ink">IBAN</label>
+                  <label className="label text-xs font-semibold text-ink">Safepay Shared Secret / Webhook Key</label>
+                  <input
+                    type="password"
+                    value={settings.safepaySecretKey}
+                    onChange={(e) => setSettings({ ...settings, safepaySecretKey: e.target.value })}
+                    placeholder="••••••••••••"
+                    className="input text-xs font-mono"
+                  />
+                </div>
+                <div className="space-y-1 sm:col-span-2">
+                  <label className="label text-xs font-semibold text-ink">Environment Mode</label>
+                  <div className="flex gap-4">
+                    <label className="flex items-center gap-1.5 text-xs text-ink cursor-pointer">
+                      <input
+                        type="radio"
+                        name="safepayEnv"
+                        checked={settings.safepayEnv === "sandbox"}
+                        onChange={() => setSettings({ ...settings, safepayEnv: "sandbox" })}
+                      />
+                      <span>Sandbox (Testing)</span>
+                    </label>
+                    <label className="flex items-center gap-1.5 text-xs text-ink cursor-pointer">
+                      <input
+                        type="radio"
+                        name="safepayEnv"
+                        checked={settings.safepayEnv === "production"}
+                        onChange={() => setSettings({ ...settings, safepayEnv: "production" })}
+                      />
+                      <span className="font-bold text-emerald-600">Production (Live Real Money)</span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-2.5 rounded-xl bg-blue-500/10 border border-blue-500/20 text-xs text-blue-900 dark:text-blue-300 flex items-center justify-between">
+                <span>Need Safepay credentials? Register online at getsafepay.com</span>
+                <a href="https://getsafepay.com" target="_blank" rel="noopener noreferrer" className="font-bold inline-flex items-center gap-1 underline">
+                  Open Safepay <ExternalLink size={12} />
+                </a>
+              </div>
+            </div>
+
+            {/* JazzCash Merchant Gateway */}
+            <div className="rounded-2xl border border-line bg-black/[0.02] dark:bg-white/[0.02] p-4 sm:p-5 space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <span className="grid h-8 w-8 place-items-center rounded-xl bg-rose-600 text-white font-black text-xs">
+                    JC
+                  </span>
+                  <div>
+                    <b className="block text-sm font-bold text-ink">JazzCash Merchant Gateway</b>
+                    <span className="text-xs text-muted">Customer enters mobile number → MPIN prompt on phone → Auto-deduction.</span>
+                  </div>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={settings.jazzcashEnabled}
+                    onChange={(e) => setSettings({ ...settings, jazzcashEnabled: e.target.checked })}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-black/20 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-rose-600"></div>
+                </label>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-3 pt-1">
+                <div className="space-y-1">
+                  <label className="label text-xs font-semibold text-ink">Merchant ID</label>
                   <input
                     type="text"
-                    value={settings.bankIban}
-                    onChange={(e) => setSettings({ ...settings, bankIban: e.target.value })}
-                    placeholder="PK..."
+                    value={settings.jazzcashMerchantId}
+                    onChange={(e) => setSettings({ ...settings, jazzcashMerchantId: e.target.value })}
+                    placeholder="MC12345"
+                    className="input text-xs font-mono"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="label text-xs font-semibold text-ink">Password</label>
+                  <input
+                    type="password"
+                    value={settings.jazzcashPassword}
+                    onChange={(e) => setSettings({ ...settings, jazzcashPassword: e.target.value })}
+                    placeholder="••••••••"
+                    className="input text-xs font-mono"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="label text-xs font-semibold text-ink">Integrity Salt</label>
+                  <input
+                    type="password"
+                    value={settings.jazzcashSalt}
+                    onChange={(e) => setSettings({ ...settings, jazzcashSalt: e.target.value })}
+                    placeholder="••••••••"
                     className="input text-xs font-mono"
                   />
                 </div>
@@ -532,58 +686,65 @@ export function CodSettingsManager() {
             disabled={saving}
             className="btn btn-primary h-12 w-full flex items-center justify-center gap-2 text-sm font-bold shadow-lg shadow-accent/20"
           >
-            <Save size={16} /> {saving ? "Saving settings…" : "Save All COD & Payment Settings"}
+            <Save size={16} /> {saving ? "Saving settings…" : "Save All Payment & COD Settings"}
           </button>
         </div>
 
         {/* Live Scenario Card & Info Sidebar */}
         <div className="space-y-4">
-          <div className="card p-5 sm:p-6 bg-black/[0.02] dark:bg-white/[0.02] border border-line">
-            <h4 className="text-sm font-bold text-ink flex items-center gap-2">
-              <ShieldCheck size={17} className="text-emerald-600" /> Active Order Flow Rules
+          {/* Real Explanation of Payoneer vs Local Gateway */}
+          <div className="card p-5 sm:p-6 bg-amber-500/10 border border-amber-500/30 text-amber-950 dark:text-amber-200 space-y-3">
+            <h4 className="text-sm font-bold flex items-center gap-2 text-amber-900 dark:text-amber-300">
+              <HelpCircle size={18} /> Payoneer vs Pakistan Online Payments
             </h4>
-
-            <div className="mt-3.5 space-y-3 text-xs">
-              {/* Karachi Rule */}
-              <div className="p-3 rounded-xl bg-white/70 dark:bg-white/5 border border-line">
-                <div className="font-semibold text-ink text-[13px] flex items-center justify-between">
-                  <span>Karachi Orders</span>
-                  <span className="font-bold text-emerald-600">✓ COD Available</span>
-                </div>
-                <p className="mt-1 text-muted">
-                  Karachi customers can choose Cash on Delivery with standard courier verification.
-                </p>
-              </div>
-
-              {/* Non-Karachi Rule */}
-              <div className="p-3 rounded-xl bg-white/70 dark:bg-white/5 border border-line">
-                <div className="font-semibold text-ink text-[13px] flex items-center justify-between">
-                  <span>Non-Karachi Cities (Lahore, Islamabad...)</span>
-                  <span className="font-bold text-amber-600">⚠️ Online Advance Only</span>
-                </div>
-                <p className="mt-1 text-muted">
-                  COD is automatically locked out. Customers pay via Payoneer, Card or Bank Transfer before dispatch.
-                </p>
-              </div>
-
-              {/* Security info */}
-              <div className="p-3 rounded-xl bg-accent/10 border border-accent/20 text-accent dark:text-accent">
-                <b className="block text-[12.5px]">Security & Deployment Safety:</b>
-                <p className="mt-0.5 text-ink/80 dark:text-white/80">
-                  Settings are stored in the secure MySQL production database. No passwords, credentials, or private keys are ever committed to GitHub.
-                </p>
-              </div>
+            <div className="text-xs space-y-2 leading-relaxed">
+              <p>
+                <b>Payoneer</b> is built strictly for receiving international foreign currency (USD, GBP, EUR) from clients abroad. It <b>cannot</b> deduct Pakistani Rupees (PKR) from local Pakistani Debit Cards or Easypaisa/JazzCash.
+              </p>
+              <p>
+                To have customers enter their <b>ATM card number + PIN/OTP</b> and have money automatically deducted into your bank account, State Bank of Pakistan requires a licensed gateway (<b>Safepay</b> or <b>JazzCash</b>).
+              </p>
             </div>
           </div>
 
-          <div className="card p-4 text-xs text-muted space-y-1.5">
-            <div className="font-semibold text-ink flex items-center gap-1.5">
-              <Info size={14} className="text-accent" />
-              <span>Instant Storefront Propagation</span>
+          {/* Documents Needed Card */}
+          <div className="card p-5 sm:p-6 bg-black/[0.02] dark:bg-white/[0.02] border border-line space-y-3">
+            <h4 className="text-sm font-bold text-ink flex items-center gap-2">
+              <ShieldCheck size={17} className="text-emerald-600" /> What You Need to Get Gateway Keys
+            </h4>
+            <ul className="text-xs space-y-2 text-muted">
+              <li className="flex items-start gap-2">
+                <span className="font-bold text-ink">1.</span>
+                <span><b>CNIC Copy:</b> Your valid Pakistani National Identity Card.</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="font-bold text-ink">2.</span>
+                <span><b>Pakistani Bank IBAN / Cheque:</b> Any bank (Meezan, HBL, Bank Alfalah, etc.) to receive funds.</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="font-bold text-ink">3.</span>
+                <span><b>NTN Certificate:</b> National Tax Number (issued free in 15 mins on FBR Iris).</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="font-bold text-ink">4.</span>
+                <span><b>Store Website:</b> <code className="text-accent">new.officialhayafoundation.com</code> (All terms, refund policy & privacy policy are already live and compliant).</span>
+              </li>
+            </ul>
+          </div>
+
+          {/* Active Rules Card */}
+          <div className="card p-5 sm:p-6 bg-black/[0.02] dark:bg-white/[0.02] border border-line">
+            <h4 className="text-sm font-bold text-ink flex items-center gap-2">
+              <ShieldCheck size={17} className="text-[#3653ff]" /> Order Verification Security
+            </h4>
+            <div className="mt-3.5 space-y-2 text-xs">
+              <div className="p-3 rounded-xl bg-white/70 dark:bg-white/5 border border-line">
+                <b className="text-ink block">Zero Fake TID Auto-Confirm:</b>
+                <p className="mt-1 text-muted">
+                  Orders placed with manual bank transfer stay <b>Unverified</b> until you verify the funds in your banking app and click <b>"Verify & Mark Paid"</b> in the Admin Orders tab.
+                </p>
+              </div>
             </div>
-            <p>
-              When you save changes here, both server-side caches and client checkout validation update instantly.
-            </p>
           </div>
         </div>
       </form>

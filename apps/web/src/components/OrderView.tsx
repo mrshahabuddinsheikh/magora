@@ -59,7 +59,12 @@ export function OrderView({ order: o, token, phone, refresh, admin = false }: { 
   return (
     <div className="space-y-4">
       {/* Delightful Delivery Van Dispatch Animation */}
-      <VanDeliveryAnimation orderNumber={o.number} customerName={o.customer?.name} />
+      <VanDeliveryAnimation
+        orderNumber={o.number}
+        customerName={o.customer?.name}
+        isCod={o.paymentMethod === "cod"}
+        isPaid={o.paymentStatus === "paid"}
+      />
 
       {/* status */}
       <div className="card p-5 sm:p-7">
@@ -384,13 +389,25 @@ function PayoneerPaymentCard({ order, onRefresh }: { order: Order; onRefresh?: (
 
   const handleSubmitRef = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!refInput.trim()) return;
+    const cleanRef = refInput.trim();
+    if (!cleanRef) return;
+
+    const dummyPatterns = ["123", "1234", "12345", "123456", "12345678", "abcd", "abcde", "asdf", "test", "demo", "none", "fake", "0000", "1111"];
+    if (cleanRef.length < 6) {
+      setErr("Transaction ID / Reference must be at least 6 characters long.");
+      return;
+    }
+    if (dummyPatterns.includes(cleanRef.toLowerCase())) {
+      setErr("Invalid reference. Please enter the actual Transaction ID (TID) from your banking or JazzCash/Easypaisa app.");
+      return;
+    }
+
     setSubmitting(true);
     setErr(null);
     try {
       await api(`/orders/${order.number}/payment-reference`, {
         method: "POST",
-        json: { reference: refInput.trim() },
+        json: { reference: cleanRef },
         auth: false,
       });
       setSubmitted(true);
@@ -462,8 +479,13 @@ function PayoneerPaymentCard({ order, onRefresh }: { order: Order; onRefresh?: (
           </p>
 
           {submitted ? (
-            <div className="rounded-xl bg-emerald-500/15 border border-emerald-500/30 p-3 text-xs font-semibold text-emerald-800 dark:text-emerald-300 flex items-center gap-2">
-              <Check size={16} /> Reference submitted! We will verify and mark your order as Paid shortly.
+            <div className="rounded-xl bg-amber-500/10 border border-amber-500/30 p-3.5 text-xs text-amber-900 dark:text-amber-200 space-y-1">
+              <p className="font-bold flex items-center gap-1.5">
+                <Check size={15} className="text-emerald-600" /> Reference Submitted (Verification Pending)
+              </p>
+              <p className="text-muted leading-relaxed">
+                Thank you! Our accounts team will verify this Transaction ID in our bank statement. Your parcel will be packed and dispatched as soon as the transfer is confirmed.
+              </p>
             </div>
           ) : (
             <form onSubmit={handleSubmitRef} className="space-y-2">
