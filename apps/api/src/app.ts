@@ -87,6 +87,7 @@ export async function buildApp() {
   });
 
   app.get("/health", { schema: { hide: true } }, async () => ({ ok: true }));
+  app.get("/api/v1/health", { schema: { hide: true } }, async () => ({ ok: true }));
   app.post("/internal/restart", { schema: { hide: true } }, async (_req, reply) => {
     setTimeout(() => process.exit(0), 100);
     return reply.send({ ok: true });

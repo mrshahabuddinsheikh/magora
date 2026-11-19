@@ -1829,15 +1829,29 @@ export async function adminRoutes(app: FastifyInstance) {
           bankTitle: Type.Optional(Type.String()),
           bankAccount: Type.Optional(Type.String()),
           bankIban: Type.Optional(Type.String()),
+          bankEnabled: Type.Optional(Type.Boolean()),
+          bankInstructions: Type.Optional(Type.String()),
+          cardEnabled: Type.Optional(Type.Boolean()),
+          cardTitle: Type.Optional(Type.String()),
+          cardInstructions: Type.Optional(Type.String()),
           safepayEnabled: Type.Optional(Type.Boolean()),
           safepayApiKey: Type.Optional(Type.String()),
           safepaySecretKey: Type.Optional(Type.String()),
           safepayEnv: Type.Optional(Type.String()),
           jazzcashEnabled: Type.Optional(Type.Boolean()),
+          jazzcashTitle: Type.Optional(Type.String()),
+          jazzcashAccountTitle: Type.Optional(Type.String()),
+          jazzcashAccountNumber: Type.Optional(Type.String()),
+          jazzcashInstructions: Type.Optional(Type.String()),
           jazzcashMerchantId: Type.Optional(Type.String()),
           jazzcashPassword: Type.Optional(Type.String()),
           jazzcashSalt: Type.Optional(Type.String()),
           jazzcashEnv: Type.Optional(Type.String()),
+          easypaisaEnabled: Type.Optional(Type.Boolean()),
+          easypaisaTitle: Type.Optional(Type.String()),
+          easypaisaAccountTitle: Type.Optional(Type.String()),
+          easypaisaAccountNumber: Type.Optional(Type.String()),
+          easypaisaInstructions: Type.Optional(Type.String()),
         }),
       },
     },
@@ -1858,15 +1872,29 @@ export async function adminRoutes(app: FastifyInstance) {
         bankTitle?: string;
         bankAccount?: string;
         bankIban?: string;
+        bankEnabled?: boolean;
+        bankInstructions?: string;
+        cardEnabled?: boolean;
+        cardTitle?: string;
+        cardInstructions?: string;
         safepayEnabled?: boolean;
         safepayApiKey?: string;
         safepaySecretKey?: string;
         safepayEnv?: string;
         jazzcashEnabled?: boolean;
+        jazzcashTitle?: string;
+        jazzcashAccountTitle?: string;
+        jazzcashAccountNumber?: string;
+        jazzcashInstructions?: string;
         jazzcashMerchantId?: string;
         jazzcashPassword?: string;
         jazzcashSalt?: string;
         jazzcashEnv?: string;
+        easypaisaEnabled?: boolean;
+        easypaisaTitle?: string;
+        easypaisaAccountTitle?: string;
+        easypaisaAccountNumber?: string;
+        easypaisaInstructions?: string;
       };
 
       const cityRestriction = b.cityRestriction || "selected_only";
@@ -1889,15 +1917,29 @@ export async function adminRoutes(app: FastifyInstance) {
         bankTitle: b.bankTitle || "",
         bankAccount: b.bankAccount || "",
         bankIban: b.bankIban || "",
+        bankEnabled: b.bankEnabled ?? true,
+        bankInstructions: b.bankInstructions || null,
+        cardEnabled: b.cardEnabled ?? true,
+        cardTitle: b.cardTitle || "Debit / Credit Card",
+        cardInstructions: b.cardInstructions || null,
         safepayEnabled: b.safepayEnabled ?? false,
         safepayApiKey: b.safepayApiKey || "",
         safepaySecretKey: b.safepaySecretKey || "",
         safepayEnv: b.safepayEnv || "sandbox",
-        jazzcashEnabled: b.jazzcashEnabled ?? false,
+        jazzcashEnabled: b.jazzcashEnabled ?? true,
+        jazzcashTitle: b.jazzcashTitle || "JazzCash",
+        jazzcashAccountTitle: b.jazzcashAccountTitle || "",
+        jazzcashAccountNumber: b.jazzcashAccountNumber || "",
+        jazzcashInstructions: b.jazzcashInstructions || null,
         jazzcashMerchantId: b.jazzcashMerchantId || "",
         jazzcashPassword: b.jazzcashPassword || "",
         jazzcashSalt: b.jazzcashSalt || "",
         jazzcashEnv: b.jazzcashEnv || "sandbox",
+        easypaisaEnabled: b.easypaisaEnabled ?? true,
+        easypaisaTitle: b.easypaisaTitle || "Easypaisa",
+        easypaisaAccountTitle: b.easypaisaAccountTitle || "",
+        easypaisaAccountNumber: b.easypaisaAccountNumber || "",
+        easypaisaInstructions: b.easypaisaInstructions || null,
       };
 
       const [existing] = await db.select().from(s.codSettings).where(eq(s.codSettings.id, 1));

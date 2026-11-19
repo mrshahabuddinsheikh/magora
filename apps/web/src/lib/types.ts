@@ -155,6 +155,33 @@ export interface StoreInfo {
     bankAccount?: string;
     bankIban?: string;
   };
+  card?: {
+    enabled: boolean;
+    title?: string;
+    instructions?: string;
+  };
+  jazzcashDetails?: {
+    enabled: boolean;
+    title?: string;
+    accountTitle?: string;
+    accountNumber?: string;
+    instructions?: string;
+  };
+  easypaisaDetails?: {
+    enabled: boolean;
+    title?: string;
+    accountTitle?: string;
+    accountNumber?: string;
+    instructions?: string;
+  };
+  bankDetails?: {
+    enabled: boolean;
+    bankTitle?: string;
+    accountTitle?: string;
+    accountNumber?: string;
+    iban?: string;
+    instructions?: string;
+  };
   safepay?: {
     enabled: boolean;
     apiKey?: string;

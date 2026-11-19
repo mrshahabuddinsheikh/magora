@@ -382,8 +382,19 @@ function PayoneerPaymentCard({ order, onRefresh }: { order: Order; onRefresh?: (
   const [submitted, setSubmitted] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
+  const methodTitle =
+    order.paymentMethod === "card"
+      ? "Debit / Credit Card Payment"
+      : order.paymentMethod === "jazzcash"
+      ? "JazzCash Payment"
+      : order.paymentMethod === "easypaisa"
+      ? "Easypaisa Payment"
+      : order.paymentMethod === "bank"
+      ? "Direct Bank Transfer (IBFT)"
+      : "Advance Online Payment";
+
   const waMessage = encodeURIComponent(
-    `Salam Magora! I have placed Order #${order.number} for Rs. ${order.totals.total}. Here is my online payment screenshot / transaction details.`
+    `Salam Magora! I have placed Order #${order.number} for Rs. ${order.totals.total} via ${methodTitle}. Here is my payment receipt / transaction details.`
   );
   const waUrl = `https://wa.me/${WHATSAPP.replace(/\D/g, "")}?text=${waMessage}`;
 
@@ -427,23 +438,23 @@ function PayoneerPaymentCard({ order, onRefresh }: { order: Order; onRefresh?: (
             <CreditCard size={20} />
           </div>
           <div>
-            <h3 className="font-bold text-base text-ink">Advance Online Payment</h3>
+            <h3 className="font-bold text-base text-ink">{methodTitle}</h3>
             <p className="text-xs text-muted">Complete payment to start order processing & dispatch</p>
           </div>
         </div>
         <span className="rounded-full bg-amber-500/15 px-3 py-1 text-xs font-bold text-amber-800 dark:text-amber-300">
-          Awaiting Payment · {money(order.totals.total)}
+          Awaiting Verification · {money(order.totals.total)}
         </span>
       </div>
 
       <div className="mt-4 grid gap-4 sm:grid-cols-2">
         <div className="space-y-3">
           <p className="text-xs text-muted leading-relaxed">
-            Since this order is for <b>{order.address.city}</b>, Cash on Delivery is unavailable. Please transfer <b>{money(order.totals.total)}</b> via Payoneer or Direct Bank Transfer:
+            Since this order is for <b>{order.address.city}</b>, Cash on Delivery is unavailable. Order total: <b>{money(order.totals.total)}</b> via <b>{methodTitle}</b>:
           </p>
           <div className="rounded-xl border border-line bg-white dark:bg-neutral-800 p-3 text-xs space-y-1.5">
             <div className="flex items-center justify-between">
-              <span className="font-semibold text-ink">Payoneer / Bank Transfer</span>
+              <span className="font-semibold text-ink">{methodTitle}</span>
               <button
                 type="button"
                 onClick={() => {

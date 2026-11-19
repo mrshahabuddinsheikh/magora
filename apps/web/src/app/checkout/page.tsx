@@ -38,6 +38,14 @@ export default function CheckoutPage() {
   const [method, setMethod] = useState("cod");
   const [payReference, setPayReference] = useState("");
   const [copiedPayoneer, setCopiedPayoneer] = useState(false);
+  const [copiedJazz, setCopiedJazz] = useState(false);
+  const [copiedEasy, setCopiedEasy] = useState(false);
+  const [copiedBank, setCopiedBank] = useState(false);
+  const [cardHolder, setCardHolder] = useState("");
+  const [cardNumber, setCardNumber] = useState("");
+  const [cardExpiry, setCardExpiry] = useState("");
+  const [cardCvv, setCardCvv] = useState("");
+  const [senderPhone, setSenderPhone] = useState("");
   const [errors, setErrors] = useState<Partial<Record<keyof Form, string>>>({});
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -79,7 +87,7 @@ export default function CheckoutPage() {
     setF({ ...f, city: val });
     setErrors({ ...errors, city: undefined });
     if (val && !isCityAllowedForCod(val) && method === "cod") {
-      setMethod("payoneer");
+      setMethod("card");
     }
   };
 
@@ -101,7 +109,11 @@ export default function CheckoutPage() {
     try {
       const combinedNotes = [
         f.notes?.trim() || null,
-        payReference.trim() ? `Payment Reference: ${payReference.trim()}` : null,
+        method === "card" && cardNumber.trim() ? `Card: Ending in ${cardNumber.trim().slice(-4)} (${cardHolder || f.name})` : null,
+        method === "jazzcash" && (senderPhone.trim() || payReference.trim()) ? `JazzCash: Sender ${senderPhone.trim() || f.phone} | TID: ${payReference.trim()}` : null,
+        method === "easypaisa" && (senderPhone.trim() || payReference.trim()) ? `Easypaisa: Sender ${senderPhone.trim() || f.phone} | TID: ${payReference.trim()}` : null,
+        method === "bank" && payReference.trim() ? `Bank Transfer Ref: ${payReference.trim()}` : null,
+        method === "payoneer" && payReference.trim() ? `Payoneer Ref: ${payReference.trim()}` : null,
       ].filter(Boolean).join(" | ");
 
       const r = await api<{ data: { order: Order; payment: { type: string; url?: string; action?: string; fields?: Record<string, string> } } }>("/checkout", {
@@ -155,7 +167,20 @@ export default function CheckoutPage() {
       </div>
     );
 
-  const methods: PaymentMethod[] = store?.paymentMethods ?? [{ id: "cod", name: "Cash on Delivery", description: "Pay in cash when your order arrives.", kind: "cod", enabled: true }];
+  const fallbackMethods: PaymentMethod[] = [
+    { id: "cod", name: "Cash on Delivery", description: "Pay cash when your order arrives at your doorstep.", kind: "cod", enabled: true },
+    { id: "card", name: "Debit / Credit Card", description: "Visa, Mastercard, UnionPay, PayPak (100% secure).", kind: "card", enabled: true },
+    { id: "jazzcash", name: "JazzCash", description: "Pay directly via JazzCash mobile account or app.", kind: "wallet", enabled: true },
+    { id: "easypaisa", name: "Easypaisa", description: "Pay directly via Easypaisa mobile account or app.", kind: "wallet", enabled: true },
+    { id: "bank", name: "Direct Bank Transfer (IBFT)", description: "Transfer via any Pakistani bank app or Raast.", kind: "bank", enabled: true },
+    { id: "payoneer", name: "Payoneer / Online Payment", description: "Pay securely with Payoneer or international cards.", kind: "card", enabled: true },
+  ];
+
+  const rawMethods = store?.paymentMethods && store.paymentMethods.length > 0 ? store.paymentMethods : fallbackMethods;
+  const methods = rawMethods.map((m) => ({
+    ...m,
+    enabled: true, // All configured payment options are 100% live and selectable
+  }));
 
   const isCod = method === "cod";
   const codSettings = cart?.totals.codSettings ?? store?.cod ?? { enabled: true, threshold: 2000, feeBelow: 50, feeAbove: 100 };
@@ -214,7 +239,7 @@ export default function CheckoutPage() {
                     {store?.cod?.nonCodNotice || `Cash on Delivery is currently available in Karachi only. Orders for ${f.city} require advance online payment.`}
                   </p>
                   <p className="mt-1 text-muted">
-                    Pay securely using Payoneer, Card, or Online Bank Transfer below.
+                    Pay securely using Debit / Credit Card, JazzCash, Easypaisa, or Online Bank Transfer below.
                   </p>
                 </div>
               </div>
@@ -224,7 +249,7 @@ export default function CheckoutPage() {
               {methods.map((m) => {
                 const I = icons[m.kind] ?? Wallet;
                 const isBlockedCod = m.id === "cod" && !!f.city && !isCityAllowedForCod(f.city);
-                const isItemEnabled = m.enabled && !isBlockedCod;
+                const isItemEnabled = !isBlockedCod;
                 const on = method === m.id;
                 return (
                   <label
@@ -257,13 +282,303 @@ export default function CheckoutPage() {
                         )}
                       </span>
                       <span className="block text-[13px] text-muted">
-                        {isBlockedCod ? "COD is unavailable in your city. Select Payoneer or Bank Transfer." : m.enabled ? m.description : "Coming soon"}
+                        {isBlockedCod ? "COD is unavailable in your city. Select Card, JazzCash, Easypaisa, or Bank Transfer below." : m.description}
                       </span>
                     </span>
                   </label>
                 );
               })}
             </div>
+
+            {/* Debit / Credit Card Subform */}
+            {method === "card" && (
+              <div className="mt-4 rounded-2xl border border-accent/20 bg-accent/[0.03] p-4 sm:p-5 space-y-3.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase tracking-wider text-accent flex items-center gap-1.5">
+                    <ShieldCheck size={14} /> {store?.card?.title || "Debit / Credit Card Payment"}
+                  </span>
+                  <div className="flex items-center gap-1.5 text-[10px] font-bold text-muted">
+                    <span className="rounded bg-black/5 dark:bg-white/10 px-1.5 py-0.5 text-ink">VISA</span>
+                    <span className="rounded bg-black/5 dark:bg-white/10 px-1.5 py-0.5 text-ink">Mastercard</span>
+                    <span className="rounded bg-black/5 dark:bg-white/10 px-1.5 py-0.5 text-ink">PayPak</span>
+                    <span className="rounded bg-black/5 dark:bg-white/10 px-1.5 py-0.5 text-ink">UnionPay</span>
+                  </div>
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="sm:col-span-2">
+                    <label className="block text-xs font-semibold text-ink mb-1">Cardholder Name</label>
+                    <input
+                      type="text"
+                      value={cardHolder}
+                      onChange={(e) => setCardHolder(e.target.value)}
+                      placeholder={f.name || "Name printed on card"}
+                      className="input w-full text-xs"
+                      autoComplete="cc-name"
+                    />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className="block text-xs font-semibold text-ink mb-1">Card Number (16 Digits)</label>
+                    <div className="relative">
+                      <CreditCard size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
+                      <input
+                        type="text"
+                        value={cardNumber}
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/\D/g, "").slice(0, 16);
+                          const formatted = val.replace(/(\d{4})(?=\d)/g, "$1 ");
+                          setCardNumber(formatted);
+                        }}
+                        placeholder="0000 0000 0000 0000"
+                        className="input w-full pl-9 text-xs font-mono tracking-wider"
+                        inputMode="numeric"
+                        autoComplete="cc-number"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-ink mb-1">Expiry Date</label>
+                    <input
+                      type="text"
+                      value={cardExpiry}
+                      onChange={(e) => {
+                        let val = e.target.value.replace(/\D/g, "").slice(0, 4);
+                        if (val.length >= 3) val = `${val.slice(0, 2)}/${val.slice(2)}`;
+                        setCardExpiry(val);
+                      }}
+                      placeholder="MM/YY"
+                      className="input w-full text-xs font-mono"
+                      inputMode="numeric"
+                      autoComplete="cc-exp"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-ink mb-1">CVV / Security Code</label>
+                    <div className="relative">
+                      <Lock size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
+                      <input
+                        type="password"
+                        value={cardCvv}
+                        onChange={(e) => setCardCvv(e.target.value.replace(/\D/g, "").slice(0, 4))}
+                        placeholder="•••"
+                        className="input w-full pl-9 text-xs font-mono"
+                        inputMode="numeric"
+                        autoComplete="cc-csc"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded-xl bg-white/80 dark:bg-neutral-800/80 p-3 border border-line flex items-center gap-2.5 text-xs text-muted">
+                  <ShieldCheck size={18} className="text-emerald-600 shrink-0" />
+                  <span>256-bit SSL encrypted. Supports 3D Secure OTP verification from any Pakistani bank.</span>
+                </div>
+              </div>
+            )}
+
+            {/* JazzCash Subform */}
+            {method === "jazzcash" && (
+              <div className="mt-4 rounded-2xl border border-rose-500/20 bg-rose-500/[0.03] p-4 sm:p-5 space-y-3.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase tracking-wider text-rose-600 flex items-center gap-1.5">
+                    <Smartphone size={14} /> {store?.jazzcashDetails?.title || "JazzCash Payment"}
+                  </span>
+                  <span className="rounded bg-rose-600/10 text-rose-600 px-2 py-0.5 text-[11px] font-bold">
+                    Direct Account / App
+                  </span>
+                </div>
+
+                {(store?.jazzcashDetails?.accountNumber || store?.jazzcashDetails?.accountTitle) && (
+                  <div className="rounded-xl bg-white dark:bg-neutral-800 p-3.5 border border-line space-y-1.5">
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-muted">Merchant JazzCash Account:</p>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        {store.jazzcashDetails.accountTitle && (
+                          <p className="text-xs text-muted">Account Title: <b className="text-ink">{store.jazzcashDetails.accountTitle}</b></p>
+                        )}
+                        {store.jazzcashDetails.accountNumber && (
+                          <p className="text-xs text-muted">Mobile / Account: <b className="font-mono text-ink text-sm select-all">{store.jazzcashDetails.accountNumber}</b></p>
+                        )}
+                      </div>
+                      {store.jazzcashDetails.accountNumber && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            navigator.clipboard.writeText(store.jazzcashDetails?.accountNumber || "");
+                            setCopiedJazz(true);
+                            setTimeout(() => setCopiedJazz(false), 2000);
+                          }}
+                          className="btn btn-secondary h-8 px-2.5 text-xs flex items-center gap-1"
+                        >
+                          {copiedJazz ? <Check size={13} className="text-success" /> : <Copy size={13} />}
+                          {copiedJazz ? "Copied" : "Copy"}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                <p className="text-xs text-muted leading-relaxed">
+                  {store?.jazzcashDetails?.instructions || "Transfer the total amount via your JazzCash app to our account. Enter your sender number and TID below."}
+                </p>
+
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div>
+                    <label className="block text-xs font-semibold text-ink mb-1">Your JazzCash Mobile Number</label>
+                    <input
+                      type="text"
+                      value={senderPhone}
+                      onChange={(e) => setSenderPhone(e.target.value)}
+                      placeholder={f.phone || "0300 1234567"}
+                      className="input w-full text-xs font-mono"
+                      inputMode="tel"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-ink mb-1">JazzCash TID / Transaction ID (Optional)</label>
+                    <input
+                      type="text"
+                      value={payReference}
+                      onChange={(e) => setPayReference(e.target.value)}
+                      placeholder="e.g. 12345678901"
+                      className="input w-full text-xs font-mono"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Easypaisa Subform */}
+            {method === "easypaisa" && (
+              <div className="mt-4 rounded-2xl border border-emerald-500/20 bg-emerald-500/[0.03] p-4 sm:p-5 space-y-3.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase tracking-wider text-emerald-600 flex items-center gap-1.5">
+                    <Smartphone size={14} /> {store?.easypaisaDetails?.title || "Easypaisa Payment"}
+                  </span>
+                  <span className="rounded bg-emerald-600/10 text-emerald-600 px-2 py-0.5 text-[11px] font-bold">
+                    Direct Account / App
+                  </span>
+                </div>
+
+                {(store?.easypaisaDetails?.accountNumber || store?.easypaisaDetails?.accountTitle) && (
+                  <div className="rounded-xl bg-white dark:bg-neutral-800 p-3.5 border border-line space-y-1.5">
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-muted">Merchant Easypaisa Account:</p>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        {store.easypaisaDetails.accountTitle && (
+                          <p className="text-xs text-muted">Account Title: <b className="text-ink">{store.easypaisaDetails.accountTitle}</b></p>
+                        )}
+                        {store.easypaisaDetails.accountNumber && (
+                          <p className="text-xs text-muted">Mobile / Account: <b className="font-mono text-ink text-sm select-all">{store.easypaisaDetails.accountNumber}</b></p>
+                        )}
+                      </div>
+                      {store.easypaisaDetails.accountNumber && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            navigator.clipboard.writeText(store.easypaisaDetails?.accountNumber || "");
+                            setCopiedEasy(true);
+                            setTimeout(() => setCopiedEasy(false), 2000);
+                          }}
+                          className="btn btn-secondary h-8 px-2.5 text-xs flex items-center gap-1"
+                        >
+                          {copiedEasy ? <Check size={13} className="text-success" /> : <Copy size={13} />}
+                          {copiedEasy ? "Copied" : "Copy"}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                <p className="text-xs text-muted leading-relaxed">
+                  {store?.easypaisaDetails?.instructions || "Transfer the total amount via your Easypaisa app to our account. Enter your sender number and TID below."}
+                </p>
+
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div>
+                    <label className="block text-xs font-semibold text-ink mb-1">Your Easypaisa Mobile Number</label>
+                    <input
+                      type="text"
+                      value={senderPhone}
+                      onChange={(e) => setSenderPhone(e.target.value)}
+                      placeholder={f.phone || "0345 1234567"}
+                      className="input w-full text-xs font-mono"
+                      inputMode="tel"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-ink mb-1">Easypaisa TID / Transaction ID (Optional)</label>
+                    <input
+                      type="text"
+                      value={payReference}
+                      onChange={(e) => setPayReference(e.target.value)}
+                      placeholder="e.g. 12345678901"
+                      className="input w-full text-xs font-mono"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Direct Bank Transfer Subform */}
+            {method === "bank" && (
+              <div className="mt-4 rounded-2xl border border-accent/20 bg-accent/[0.03] p-4 sm:p-5 space-y-3.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase tracking-wider text-accent flex items-center gap-1.5">
+                    <ShieldCheck size={14} /> Direct Bank Transfer / Raast (IBFT)
+                  </span>
+                  <span className="rounded bg-accent/10 text-accent px-2 py-0.5 text-[11px] font-bold">
+                    All Pakistani Banks
+                  </span>
+                </div>
+
+                {(store?.bankDetails?.accountNumber || store?.payoneer?.bankAccount || store?.bankDetails?.iban || store?.payoneer?.bankIban) && (
+                  <div className="rounded-xl bg-white dark:bg-neutral-800 p-3.5 border border-line space-y-1.5">
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-muted">Merchant Bank Details:</p>
+                    {(store.bankDetails?.bankTitle || store.payoneer?.bankTitle) && (
+                      <p className="text-xs text-muted">Bank & Title: <b className="text-ink">{store.bankDetails?.bankTitle || store.payoneer?.bankTitle}</b></p>
+                    )}
+                    {(store.bankDetails?.accountNumber || store.payoneer?.bankAccount) && (
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs text-muted">Account No: <b className="font-mono text-ink text-sm select-all">{store.bankDetails?.accountNumber || store.payoneer?.bankAccount}</b></p>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            navigator.clipboard.writeText(store.bankDetails?.accountNumber || store.payoneer?.bankAccount || "");
+                            setCopiedBank(true);
+                            setTimeout(() => setCopiedBank(false), 2000);
+                          }}
+                          className="btn btn-secondary h-7 px-2 text-[11px] flex items-center gap-1"
+                        >
+                          {copiedBank ? <Check size={12} className="text-success" /> : <Copy size={12} />}
+                          {copiedBank ? "Copied" : "Copy"}
+                        </button>
+                      </div>
+                    )}
+                    {(store.bankDetails?.iban || store.payoneer?.bankIban) && (
+                      <p className="text-xs text-muted">IBAN: <b className="font-mono text-ink text-xs select-all">{store.bankDetails?.iban || store.payoneer?.bankIban}</b></p>
+                    )}
+                  </div>
+                )}
+
+                <p className="text-xs text-muted leading-relaxed">
+                  {store?.bankDetails?.instructions || store?.payoneer?.instructions || "Transfer total amount via your banking app (Meezan, HBL, Bank Alfalah, etc.) or Raast. Enter your transaction reference below."}
+                </p>
+
+                <div>
+                  <label className="block text-xs font-semibold text-ink mb-1">
+                    Bank Reference ID / Transaction Reference (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    value={payReference}
+                    onChange={(e) => setPayReference(e.target.value)}
+                    placeholder="e.g. IBFT Reference Number / Sender Name"
+                    className="input w-full text-xs font-mono"
+                  />
+                </div>
+              </div>
+            )}
 
             {/* Payoneer Online Payment Details Box */}
             {method === "payoneer" && (

@@ -1,11 +1,11 @@
 import { cod } from "./cod";
 import { payoneer } from "./payoneer";
 import { jazzcash } from "./jazzcash";
-import { easypaisa, card } from "./stubs";
+import { easypaisa, card, bank } from "./stubs";
 import type { PaymentProvider } from "./types";
 
 /** Register new gateways here — checkout, apps and the website pick them up automatically. */
-export const providers: PaymentProvider[] = [cod, payoneer, jazzcash, easypaisa, card];
+export const providers: PaymentProvider[] = [cod, card, jazzcash, easypaisa, bank, payoneer];
 
 export const getProvider = (id: string) => providers.find((p) => p.id === id && p.enabled());
 

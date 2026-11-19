@@ -158,17 +158,43 @@ export async function catalogRoutes(app: FastifyInstance) {
           enabled: codSettings.enabled,
         };
       }
-      if (m.id === "payoneer") {
+      if (m.id === "card") {
         return {
           ...m,
-          name: codSettings.payoneerTitle || m.name,
-          enabled: codSettings.payoneerEnabled,
+          name: codSettings.cardTitle || "Debit / Credit Card",
+          description: "Visa, Mastercard, UnionPay, PayPak.",
+          enabled: codSettings.cardEnabled ?? true,
         };
       }
       if (m.id === "jazzcash") {
         return {
           ...m,
-          enabled: !!(codSettings.jazzcashEnabled && codSettings.jazzcashMerchantId),
+          name: codSettings.jazzcashTitle || "JazzCash",
+          description: "Pay with your JazzCash account or app.",
+          enabled: codSettings.jazzcashEnabled ?? true,
+        };
+      }
+      if (m.id === "easypaisa") {
+        return {
+          ...m,
+          name: codSettings.easypaisaTitle || "Easypaisa",
+          description: "Pay with your Easypaisa account or app.",
+          enabled: codSettings.easypaisaEnabled ?? true,
+        };
+      }
+      if (m.id === "bank") {
+        return {
+          ...m,
+          name: codSettings.bankTitle ? `Bank: ${codSettings.bankTitle}` : "Direct Bank Transfer",
+          description: "Transfer via online banking or Raast.",
+          enabled: codSettings.bankEnabled ?? true,
+        };
+      }
+      if (m.id === "payoneer") {
+        return {
+          ...m,
+          name: codSettings.payoneerTitle || m.name,
+          enabled: codSettings.payoneerEnabled,
         };
       }
       return m;
@@ -186,6 +212,33 @@ export async function catalogRoutes(app: FastifyInstance) {
           cityRestriction: codSettings.cityRestriction,
           allowedCities: codSettings.allowedCities,
           nonCodNotice: codSettings.nonCodNotice,
+        },
+        card: {
+          enabled: codSettings.cardEnabled ?? true,
+          title: codSettings.cardTitle || "Debit / Credit Card",
+          instructions: codSettings.cardInstructions || "Pay securely with any Visa, Mastercard, UnionPay or PayPak debit/credit card.",
+        },
+        jazzcashDetails: {
+          enabled: codSettings.jazzcashEnabled ?? true,
+          title: codSettings.jazzcashTitle || "JazzCash",
+          accountTitle: codSettings.jazzcashAccountTitle || "",
+          accountNumber: codSettings.jazzcashAccountNumber || "",
+          instructions: codSettings.jazzcashInstructions || "Send payment to our JazzCash account and enter your TID / sender mobile below.",
+        },
+        easypaisaDetails: {
+          enabled: codSettings.easypaisaEnabled ?? true,
+          title: codSettings.easypaisaTitle || "Easypaisa",
+          accountTitle: codSettings.easypaisaAccountTitle || "",
+          accountNumber: codSettings.easypaisaAccountNumber || "",
+          instructions: codSettings.easypaisaInstructions || "Send payment to our Easypaisa account and enter your TID / sender mobile below.",
+        },
+        bankDetails: {
+          enabled: codSettings.bankEnabled ?? true,
+          bankTitle: codSettings.bankTitle || "",
+          accountTitle: codSettings.bankTitle || "",
+          accountNumber: codSettings.bankAccount || "",
+          iban: codSettings.bankIban || "",
+          instructions: codSettings.bankInstructions || "Transfer the total amount via online banking / Raast and share your receipt on WhatsApp.",
         },
         payoneer: {
           enabled: codSettings.payoneerEnabled,

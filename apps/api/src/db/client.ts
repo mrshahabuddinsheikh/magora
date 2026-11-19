@@ -83,6 +83,48 @@ export async function tuneDatabase() {
       if (!existing.has("bank_iban")) {
         await conn.query(`ALTER TABLE cod_settings ADD COLUMN bank_iban VARCHAR(255) DEFAULT ''`);
       }
+      if (!existing.has("bank_enabled")) {
+        await conn.query(`ALTER TABLE cod_settings ADD COLUMN bank_enabled BOOLEAN NOT NULL DEFAULT TRUE`);
+      }
+      if (!existing.has("bank_instructions")) {
+        await conn.query(`ALTER TABLE cod_settings ADD COLUMN bank_instructions TEXT`);
+      }
+      if (!existing.has("card_enabled")) {
+        await conn.query(`ALTER TABLE cod_settings ADD COLUMN card_enabled BOOLEAN NOT NULL DEFAULT TRUE`);
+      }
+      if (!existing.has("card_title")) {
+        await conn.query(`ALTER TABLE cod_settings ADD COLUMN card_title VARCHAR(255) DEFAULT 'Debit / Credit Card'`);
+      }
+      if (!existing.has("card_instructions")) {
+        await conn.query(`ALTER TABLE cod_settings ADD COLUMN card_instructions TEXT`);
+      }
+      if (!existing.has("jazzcash_title")) {
+        await conn.query(`ALTER TABLE cod_settings ADD COLUMN jazzcash_title VARCHAR(255) DEFAULT 'JazzCash'`);
+      }
+      if (!existing.has("jazzcash_account_title")) {
+        await conn.query(`ALTER TABLE cod_settings ADD COLUMN jazzcash_account_title VARCHAR(255) DEFAULT ''`);
+      }
+      if (!existing.has("jazzcash_account_number")) {
+        await conn.query(`ALTER TABLE cod_settings ADD COLUMN jazzcash_account_number VARCHAR(255) DEFAULT ''`);
+      }
+      if (!existing.has("jazzcash_instructions")) {
+        await conn.query(`ALTER TABLE cod_settings ADD COLUMN jazzcash_instructions TEXT`);
+      }
+      if (!existing.has("easypaisa_enabled")) {
+        await conn.query(`ALTER TABLE cod_settings ADD COLUMN easypaisa_enabled BOOLEAN NOT NULL DEFAULT TRUE`);
+      }
+      if (!existing.has("easypaisa_title")) {
+        await conn.query(`ALTER TABLE cod_settings ADD COLUMN easypaisa_title VARCHAR(255) DEFAULT 'Easypaisa'`);
+      }
+      if (!existing.has("easypaisa_account_title")) {
+        await conn.query(`ALTER TABLE cod_settings ADD COLUMN easypaisa_account_title VARCHAR(255) DEFAULT ''`);
+      }
+      if (!existing.has("easypaisa_account_number")) {
+        await conn.query(`ALTER TABLE cod_settings ADD COLUMN easypaisa_account_number VARCHAR(255) DEFAULT ''`);
+      }
+      if (!existing.has("easypaisa_instructions")) {
+        await conn.query(`ALTER TABLE cod_settings ADD COLUMN easypaisa_instructions TEXT`);
+      }
       if (!existing.has("safepay_enabled")) {
         await conn.query(`ALTER TABLE cod_settings ADD COLUMN safepay_enabled BOOLEAN NOT NULL DEFAULT FALSE`);
       }

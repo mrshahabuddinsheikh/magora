@@ -22,15 +22,29 @@ interface CodSettings {
   bankTitle?: string;
   bankAccount?: string;
   bankIban?: string;
+  bankEnabled?: boolean;
+  bankInstructions?: string;
+  cardEnabled?: boolean;
+  cardTitle?: string;
+  cardInstructions?: string;
   safepayEnabled?: boolean;
   safepayApiKey?: string;
   safepaySecretKey?: string;
   safepayEnv?: "sandbox" | "production";
   jazzcashEnabled?: boolean;
+  jazzcashTitle?: string;
+  jazzcashAccountTitle?: string;
+  jazzcashAccountNumber?: string;
+  jazzcashInstructions?: string;
   jazzcashMerchantId?: string;
   jazzcashPassword?: string;
   jazzcashSalt?: string;
   jazzcashEnv?: "sandbox" | "production";
+  easypaisaEnabled?: boolean;
+  easypaisaTitle?: string;
+  easypaisaAccountTitle?: string;
+  easypaisaAccountNumber?: string;
+  easypaisaInstructions?: string;
 }
 
 const PAKISTAN_MAJOR_CITIES = [
@@ -64,15 +78,29 @@ export function CodSettingsManager() {
     bankTitle: "",
     bankAccount: "",
     bankIban: "",
+    bankEnabled: true,
+    bankInstructions: "Transfer total amount via your banking app or Raast. Share screenshot on WhatsApp.",
+    cardEnabled: true,
+    cardTitle: "Debit / Credit Card",
+    cardInstructions: "Supports Visa, Mastercard, PayPak, UnionPay from any Pakistani or international bank.",
     safepayEnabled: false,
     safepayApiKey: "",
     safepaySecretKey: "",
     safepayEnv: "sandbox",
-    jazzcashEnabled: false,
+    jazzcashEnabled: true,
+    jazzcashTitle: "JazzCash",
+    jazzcashAccountTitle: "",
+    jazzcashAccountNumber: "",
+    jazzcashInstructions: "Send payment to our JazzCash account and enter your TID / sender mobile below.",
     jazzcashMerchantId: "",
     jazzcashPassword: "",
     jazzcashSalt: "",
     jazzcashEnv: "sandbox",
+    easypaisaEnabled: true,
+    easypaisaTitle: "Easypaisa",
+    easypaisaAccountTitle: "",
+    easypaisaAccountNumber: "",
+    easypaisaInstructions: "Send payment to our Easypaisa account and enter your TID / sender mobile below.",
   });
 
   const [newCityInput, setNewCityInput] = useState("");
@@ -98,15 +126,29 @@ export function CodSettingsManager() {
             bankTitle: res.data.bankTitle || "",
             bankAccount: res.data.bankAccount || "",
             bankIban: res.data.bankIban || "",
+            bankEnabled: res.data.bankEnabled ?? true,
+            bankInstructions: res.data.bankInstructions || "",
+            cardEnabled: res.data.cardEnabled ?? true,
+            cardTitle: res.data.cardTitle || "Debit / Credit Card",
+            cardInstructions: res.data.cardInstructions || "",
             safepayEnabled: res.data.safepayEnabled ?? false,
             safepayApiKey: res.data.safepayApiKey || "",
             safepaySecretKey: res.data.safepaySecretKey || "",
             safepayEnv: res.data.safepayEnv || "sandbox",
-            jazzcashEnabled: res.data.jazzcashEnabled ?? false,
+            jazzcashEnabled: res.data.jazzcashEnabled ?? true,
+            jazzcashTitle: res.data.jazzcashTitle || "JazzCash",
+            jazzcashAccountTitle: res.data.jazzcashAccountTitle || "",
+            jazzcashAccountNumber: res.data.jazzcashAccountNumber || "",
+            jazzcashInstructions: res.data.jazzcashInstructions || "",
             jazzcashMerchantId: res.data.jazzcashMerchantId || "",
             jazzcashPassword: res.data.jazzcashPassword || "",
             jazzcashSalt: res.data.jazzcashSalt || "",
             jazzcashEnv: res.data.jazzcashEnv || "sandbox",
+            easypaisaEnabled: res.data.easypaisaEnabled ?? true,
+            easypaisaTitle: res.data.easypaisaTitle || "Easypaisa",
+            easypaisaAccountTitle: res.data.easypaisaAccountTitle || "",
+            easypaisaAccountNumber: res.data.easypaisaAccountNumber || "",
+            easypaisaInstructions: res.data.easypaisaInstructions || "",
           });
         }
       })
@@ -453,23 +495,20 @@ export function CodSettingsManager() {
             </div>
           </div>
 
-          {/* Section 2: Direct Pakistani Bank Transfer & Advance Payment */}
+          {/* Section 2: Debit / Credit Card Direct Payments */}
           <div className="card p-5 sm:p-7 space-y-5">
-            <h3 className="text-base font-bold text-ink flex items-center gap-2 border-b border-line pb-3">
-              <CreditCard size={18} className="text-[#3653ff]" /> Direct Bank Transfer / Advance Payment (Pakistan)
-            </h3>
-
-            {/* Toggle */}
-            <div className="flex items-center justify-between p-4 rounded-2xl bg-black/[0.03] dark:bg-white/[0.03] border border-line">
+            <div className="flex items-center justify-between border-b border-line pb-3">
               <div>
-                <b className="block text-sm font-bold text-ink">Enable Advance Bank Transfer Gateway</b>
-                <p className="text-xs text-muted mt-0.5">Allows non-Karachi customers to pay via IBFT / Bank Transfer.</p>
+                <h3 className="text-base font-bold text-ink flex items-center gap-2">
+                  <CreditCard size={18} className="text-[#3653ff]" /> Debit & Credit Card Payments (Pakistan & International)
+                </h3>
+                <p className="text-xs text-muted mt-0.5">Allows customers to pay using Visa, Mastercard, PayPak, or UnionPay.</p>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
                 <input
                   type="checkbox"
-                  checked={settings.payoneerEnabled}
-                  onChange={(e) => setSettings({ ...settings, payoneerEnabled: e.target.checked })}
+                  checked={settings.cardEnabled}
+                  onChange={(e) => setSettings({ ...settings, cardEnabled: e.target.checked })}
                   className="sr-only peer"
                 />
                 <div className="w-11 h-6 bg-black/20 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#3653ff]"></div>
@@ -481,13 +520,172 @@ export function CodSettingsManager() {
                 <label className="label text-xs font-bold text-ink">Display Title</label>
                 <input
                   type="text"
-                  value={settings.payoneerTitle}
-                  onChange={(e) => setSettings({ ...settings, payoneerTitle: e.target.value })}
-                  placeholder="e.g. Online Bank Transfer (IBFT)"
+                  value={settings.cardTitle}
+                  onChange={(e) => setSettings({ ...settings, cardTitle: e.target.value })}
+                  placeholder="e.g. Debit / Credit Card"
                   className="input text-xs"
                 />
               </div>
+              <div className="space-y-1">
+                <label className="label text-xs font-bold text-ink">Supported Card Brands</label>
+                <div className="flex items-center gap-2 pt-2 text-xs font-bold text-muted">
+                  <span className="rounded bg-black/5 dark:bg-white/10 px-2 py-1 text-ink">VISA</span>
+                  <span className="rounded bg-black/5 dark:bg-white/10 px-2 py-1 text-ink">Mastercard</span>
+                  <span className="rounded bg-black/5 dark:bg-white/10 px-2 py-1 text-ink">PayPak</span>
+                  <span className="rounded bg-black/5 dark:bg-white/10 px-2 py-1 text-ink">UnionPay</span>
+                </div>
+              </div>
+              <div className="space-y-1 sm:col-span-2">
+                <label className="label text-xs font-bold text-ink">Customer Instructions</label>
+                <input
+                  type="text"
+                  value={settings.cardInstructions}
+                  onChange={(e) => setSettings({ ...settings, cardInstructions: e.target.value })}
+                  placeholder="Pay securely with any Visa, Mastercard, UnionPay or PayPak debit/credit card."
+                  className="input text-xs"
+                />
+              </div>
+            </div>
+          </div>
 
+          {/* Section 3: JazzCash & Easypaisa Mobile Accounts */}
+          <div className="card p-5 sm:p-7 space-y-6">
+            <div className="border-b border-line pb-3">
+              <h3 className="text-base font-bold text-ink flex items-center gap-2">
+                <Wallet size={18} className="text-rose-600" /> JazzCash & Easypaisa Mobile Wallets
+              </h3>
+              <p className="text-xs text-muted mt-0.5">Customers transfer directly to your JazzCash / Easypaisa mobile account with 1-click copy.</p>
+            </div>
+
+            {/* JazzCash Sub-section */}
+            <div className="rounded-2xl border border-line bg-black/[0.02] dark:bg-white/[0.02] p-4 sm:p-5 space-y-3.5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="grid h-7 w-7 place-items-center rounded-lg bg-rose-600 text-white font-black text-xs">JC</span>
+                  <b className="text-sm font-bold text-ink">JazzCash Mobile Account</b>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={settings.jazzcashEnabled}
+                    onChange={(e) => setSettings({ ...settings, jazzcashEnabled: e.target.checked })}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-black/20 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-rose-600"></div>
+                </label>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-1">
+                  <label className="label text-xs font-semibold text-ink">Account Title</label>
+                  <input
+                    type="text"
+                    value={settings.jazzcashAccountTitle}
+                    onChange={(e) => setSettings({ ...settings, jazzcashAccountTitle: e.target.value })}
+                    placeholder="e.g. Magora Store / Your Name"
+                    className="input text-xs"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="label text-xs font-semibold text-ink">JazzCash Mobile / Account Number</label>
+                  <input
+                    type="text"
+                    value={settings.jazzcashAccountNumber}
+                    onChange={(e) => setSettings({ ...settings, jazzcashAccountNumber: e.target.value })}
+                    placeholder="e.g. 0300 1234567"
+                    className="input text-xs font-mono"
+                  />
+                </div>
+                <div className="space-y-1 sm:col-span-2">
+                  <label className="label text-xs font-semibold text-ink">Customer Instructions</label>
+                  <input
+                    type="text"
+                    value={settings.jazzcashInstructions}
+                    onChange={(e) => setSettings({ ...settings, jazzcashInstructions: e.target.value })}
+                    placeholder="Send payment to our JazzCash account and enter your TID / sender number below."
+                    className="input text-xs"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Easypaisa Sub-section */}
+            <div className="rounded-2xl border border-line bg-black/[0.02] dark:bg-white/[0.02] p-4 sm:p-5 space-y-3.5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="grid h-7 w-7 place-items-center rounded-lg bg-emerald-600 text-white font-black text-xs">EP</span>
+                  <b className="text-sm font-bold text-ink">Easypaisa Mobile Account</b>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={settings.easypaisaEnabled}
+                    onChange={(e) => setSettings({ ...settings, easypaisaEnabled: e.target.checked })}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-black/20 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+                </label>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-1">
+                  <label className="label text-xs font-semibold text-ink">Account Title</label>
+                  <input
+                    type="text"
+                    value={settings.easypaisaAccountTitle}
+                    onChange={(e) => setSettings({ ...settings, easypaisaAccountTitle: e.target.value })}
+                    placeholder="e.g. Magora Store / Your Name"
+                    className="input text-xs"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="label text-xs font-semibold text-ink">Easypaisa Mobile / Account Number</label>
+                  <input
+                    type="text"
+                    value={settings.easypaisaAccountNumber}
+                    onChange={(e) => setSettings({ ...settings, easypaisaAccountNumber: e.target.value })}
+                    placeholder="e.g. 0345 1234567"
+                    className="input text-xs font-mono"
+                  />
+                </div>
+                <div className="space-y-1 sm:col-span-2">
+                  <label className="label text-xs font-semibold text-ink">Customer Instructions</label>
+                  <input
+                    type="text"
+                    value={settings.easypaisaInstructions}
+                    onChange={(e) => setSettings({ ...settings, easypaisaInstructions: e.target.value })}
+                    placeholder="Send payment to our Easypaisa account and enter your TID / sender number below."
+                    className="input text-xs"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Section 4: Direct Pakistani Bank Transfer & Advance Payment */}
+          <div className="card p-5 sm:p-7 space-y-5">
+            <h3 className="text-base font-bold text-ink flex items-center gap-2 border-b border-line pb-3">
+              <CreditCard size={18} className="text-[#3653ff]" /> Direct Bank Transfer / Raast (IBFT)
+            </h3>
+
+            {/* Toggle */}
+            <div className="flex items-center justify-between p-4 rounded-2xl bg-black/[0.03] dark:bg-white/[0.03] border border-line">
+              <div>
+                <b className="block text-sm font-bold text-ink">Enable Direct Bank Transfer Gateway</b>
+                <p className="text-xs text-muted mt-0.5">Allows customers to transfer from any Pakistani bank (Meezan, HBL, Alfalah, etc.) or Raast.</p>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={settings.bankEnabled}
+                  onChange={(e) => setSettings({ ...settings, bankEnabled: e.target.checked })}
+                  className="sr-only peer"
+                />
+                <div className="w-11 h-6 bg-black/20 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#3653ff]"></div>
+              </label>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-1">
                 <label className="label text-xs font-bold text-ink">Bank Name & Title</label>
                 <input
@@ -510,7 +708,7 @@ export function CodSettingsManager() {
                 />
               </div>
 
-              <div className="space-y-1">
+              <div className="space-y-1 sm:col-span-2">
                 <label className="label text-xs font-bold text-ink">IBAN (24 Characters)</label>
                 <input
                   type="text"
@@ -525,9 +723,78 @@ export function CodSettingsManager() {
                 <label className="label text-xs font-bold text-ink">Customer Payment Instructions</label>
                 <textarea
                   rows={2}
+                  value={settings.bankInstructions}
+                  onChange={(e) => setSettings({ ...settings, bankInstructions: e.target.value })}
+                  placeholder="Transfer total amount via your banking app or Raast. Share receipt screenshot on WhatsApp."
+                  className="input w-full text-xs p-2.5 resize-none"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Section 5: Payoneer Gateway */}
+          <div className="card p-5 sm:p-7 space-y-5">
+            <h3 className="text-base font-bold text-ink flex items-center gap-2 border-b border-line pb-3">
+              <Globe size={18} className="text-[#3653ff]" /> Payoneer & International Payment Gateway
+            </h3>
+
+            <div className="flex items-center justify-between p-4 rounded-2xl bg-black/[0.03] dark:bg-white/[0.03] border border-line">
+              <div>
+                <b className="block text-sm font-bold text-ink">Enable Payoneer Gateway</b>
+                <p className="text-xs text-muted mt-0.5">Allows overseas & international customers to pay via Payoneer.</p>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={settings.payoneerEnabled}
+                  onChange={(e) => setSettings({ ...settings, payoneerEnabled: e.target.checked })}
+                  className="sr-only peer"
+                />
+                <div className="w-11 h-6 bg-black/20 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#3653ff]"></div>
+              </label>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1">
+                <label className="label text-xs font-bold text-ink">Gateway Title</label>
+                <input
+                  type="text"
+                  value={settings.payoneerTitle}
+                  onChange={(e) => setSettings({ ...settings, payoneerTitle: e.target.value })}
+                  placeholder="e.g. Payoneer / International Payment"
+                  className="input text-xs"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="label text-xs font-bold text-ink">Payoneer Account Email</label>
+                <input
+                  type="email"
+                  value={settings.payoneerEmail}
+                  onChange={(e) => setSettings({ ...settings, payoneerEmail: e.target.value })}
+                  placeholder="payments@magora.pk"
+                  className="input text-xs"
+                />
+              </div>
+
+              <div className="space-y-1 sm:col-span-2">
+                <label className="label text-xs font-bold text-ink">Payoneer Direct Payment Link (Optional)</label>
+                <input
+                  type="url"
+                  value={settings.payoneerLink}
+                  onChange={(e) => setSettings({ ...settings, payoneerLink: e.target.value })}
+                  placeholder="https://payoneer.me/..."
+                  className="input text-xs font-mono"
+                />
+              </div>
+
+              <div className="space-y-1 sm:col-span-2">
+                <label className="label text-xs font-bold text-ink">Instructions</label>
+                <textarea
+                  rows={2}
                   value={settings.payoneerInstructions}
                   onChange={(e) => setSettings({ ...settings, payoneerInstructions: e.target.value })}
-                  placeholder="Transfer order amount via your bank app (Meezan, HBL, etc.) or JazzCash/Easypaisa. Share receipt on WhatsApp."
+                  placeholder="Pay via Payoneer or online transfer. Share your transaction ID on WhatsApp."
                   className="input w-full text-xs p-2.5 resize-none"
                 />
               </div>

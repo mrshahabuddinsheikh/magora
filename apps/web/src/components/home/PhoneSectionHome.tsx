@@ -6,6 +6,7 @@ import { HeroStage, type HeroProduct } from "../HeroStage";
 import { PhoneFinder } from "../PhoneFinder";
 import { ProductCard } from "../ProductCard";
 import { ProductThumb, SkinThumb } from "../CaseThumb";
+import { ShopByPhone } from "./ShopByPhone";
 import { Cta, Faq, OtherShops, Quality, SectionTitle, Steps } from "./Blocks";
 import type { CategoryDef } from "@/lib/categories";
 
@@ -157,28 +158,7 @@ export async function PhoneSectionHome({ section, copy }: { section: CategoryDef
       </section>
 
       {/* ───── shop by phone ───── */}
-      <section className="mt-16">
-        <SectionTitle eyebrow="Made for your model" title="Shop by phone" href={shop} />
-        <div className="grid gap-4 md:grid-cols-3">
-          {brands.map((b) => (
-            <div key={b.slug} className="card p-5">
-              <div className="flex items-center justify-between">
-                <h3 className="text-xl font-bold">{b.name}</h3>
-                <Link href={`${shop}&brand=${b.slug}`} className="text-sm font-semibold text-accent">
-                  All {b.models.length} →
-                </Link>
-              </div>
-              <div className="mt-4 flex flex-wrap gap-2">
-                {b.models.slice(0, 7).map((m) => (
-                  <Link key={m.slug} href={`${shop}&model=${m.slug}`} className="chip" prefetch={false}>
-                    <Smartphone size={13} /> {shortModel(m.name)}
-                  </Link>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
+      <ShopByPhone brands={brands as any} category={section.slug} />
 
       {/* ───── best sellers ───── */}
       {best.length > 0 && (

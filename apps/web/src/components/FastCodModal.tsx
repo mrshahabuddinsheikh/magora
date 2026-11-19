@@ -200,7 +200,7 @@ export function FastCodModal({
             </div>
             {city.toLowerCase() !== "karachi" && (
               <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-2.5 text-xs text-amber-900 dark:text-amber-200">
-                <span className="font-bold">⚠️ Notice for {city}:</span> Cash on Delivery is currently available in Karachi only. Your order for {city} will be confirmed via Online Payment (Payoneer / Card / Bank Transfer).
+                <span className="font-bold">⚠️ Notice for {city}:</span> Cash on Delivery is currently available in Karachi only. Orders for {city} require Advance Online Payment (Card, JazzCash, Easypaisa, or Bank Transfer).
               </div>
             )}
             <input

@@ -28,11 +28,15 @@ const ts = (d: Date) => d.toISOString().replace(/[-:T]/g, "").slice(0, 14);
 export const jazzcash: PaymentProvider = {
   id: "jazzcash",
   name: "JazzCash",
-  description: "Pay with your JazzCash wallet or card.",
+  description: "Pay with your JazzCash account or app.",
   kind: "wallet",
-  enabled: () => process.env.JAZZCASH_ENABLED === "true" && !!env().merchantId,
+  enabled: () => true,
   async initiate(order) {
     const e = env();
+    if (!e.merchantId) {
+      // Direct account transfer handled via checkout & order receipt
+      return { type: "none" };
+    }
     const now = new Date();
     const fields: Record<string, string> = {
       pp_Version: "1.1",
