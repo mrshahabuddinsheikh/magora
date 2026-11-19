@@ -7,7 +7,7 @@ import * as s from "../db/schema";
 import { store } from "../config";
 import { ApiError, badRequest, notFound, unauthorized } from "../lib/errors";
 import { optionalAuth, requireAuth } from "../lib/auth";
-import { computeCart } from "./cart";
+import { computeCart, getCodSettings } from "./cart";
 import { isBlocked } from "./engage";
 import { getProvider, providers } from "../payments";
 import { invalidate } from "../lib/cache";
@@ -157,8 +157,25 @@ export async function orderRoutes(app: FastifyInstance) {
       if (!phone) throw badRequest("Please enter a valid mobile number, e.g. 0300 1234567", "invalid_phone");
       const provider = getProvider(body.paymentMethod);
       if (!provider) throw badRequest("This payment method is not available", "invalid_payment_method");
-      if (provider.id === "cod" && (await isBlocked(phone)))
-        throw badRequest("Cash on delivery isn't available for this number. Please message us on WhatsApp to place your order.", "cod_blocked");
+      if (provider.id === "cod") {
+        if (await isBlocked(phone)) {
+          throw badRequest("Cash on delivery isn't available for this number. Please message us on WhatsApp to place your order.", "cod_blocked");
+        }
+        const codSettings = await getCodSettings();
+        if (!codSettings.enabled) {
+          throw badRequest("Cash on delivery is currently disabled. Please select Online Payment.", "cod_disabled");
+        }
+        if (codSettings.cityRestriction === "selected_only") {
+          const userCity = (body.address.city || "").trim().toLowerCase();
+          const isAllowed = codSettings.allowedCities.some((c) => c.trim().toLowerCase() === userCity);
+          if (!isAllowed) {
+            throw badRequest(
+              codSettings.nonCodNotice || `Cash on delivery is only available in ${codSettings.allowedCities.join(", ")}. Please choose online payment for ${body.address.city}.`,
+              "cod_city_not_allowed"
+            );
+          }
+        }
+      }
 
       const result = await db.transaction(async (tx) => {
         const cart = await computeCart(body.cartId, tx);
@@ -336,7 +353,13 @@ export async function orderRoutes(app: FastifyInstance) {
       const unitPrice = v.variant.price;
       const subtotal = unitPrice * qty;
       const shipping = subtotal >= store.shipping.freeAbove ? 0 : store.shipping.flatRate;
-      const codFee = store.cod.fee;
+
+      const codSettings = await getCodSettings();
+      const userCity = (b.address.city || "").trim().toLowerCase();
+      const isCodCity = codSettings.cityRestriction !== "selected_only" || codSettings.allowedCities.some((c) => c.trim().toLowerCase() === userCity);
+      const isCod = codSettings.enabled && isCodCity;
+      const effectivePaymentMethod = isCod ? "cod" : "payoneer";
+      const codFee = isCod ? store.cod.fee : 0;
       const total = subtotal + shipping + codFee;
 
       const result = await db.transaction(async (tx) => {
@@ -355,7 +378,7 @@ export async function orderRoutes(app: FastifyInstance) {
           accessToken: nanoid(32),
           userId: req.user?.id ?? null,
           status: "pending",
-          paymentMethod: "cod",
+          paymentMethod: effectivePaymentMethod,
           paymentStatus: "unpaid",
           customerName: b.customer.name.trim(),
           customerPhone: phone,
@@ -534,6 +557,48 @@ export async function orderRoutes(app: FastifyInstance) {
         await db.insert(s.orderEvents).values({ orderId: o.id, status: "confirmed", note: `Paid via ${provider.name}` });
       }
       return { data: { orderNumber: o.number, paid: result.paid } };
+    },
+  );
+
+  /* Customer submits transaction reference for online / Payoneer payments */
+  app.post(
+    "/orders/:number/payment-reference",
+    {
+      schema: {
+        tags: ["Checkout"],
+        summary: "Submit online payment reference or transaction ID",
+        params: Type.Object({ number: Type.String() }),
+        body: Type.Object({
+          reference: Type.String({ minLength: 2, maxLength: 255 }),
+          notes: Type.Optional(Type.String()),
+        }),
+      },
+    },
+    async (req) => {
+      const { number } = req.params as { number: string };
+      const { reference, notes } = req.body as { reference: string; notes?: string };
+      const [o] = await db.select().from(s.orders).where(eq(s.orders.number, number));
+      if (!o) throw notFound("Order not found");
+
+      const updateText = notes
+        ? `${o.notes ? o.notes + " | " : ""}Payment Ref: ${reference} (${notes})`
+        : `${o.notes ? o.notes + " | " : ""}Payment Ref: ${reference}`;
+
+      await db
+        .update(s.orders)
+        .set({
+          notes: updateText,
+          updatedAt: new Date(),
+        })
+        .where(eq(s.orders.id, o.id));
+
+      await db.insert(s.orderEvents).values({
+        orderId: o.id,
+        status: o.status,
+        note: `Customer submitted payment reference: ${reference}`,
+      });
+
+      return { data: { orderNumber: o.number, reference, ok: true } };
     },
   );
 }

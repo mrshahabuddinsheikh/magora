@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useRef } from "react";
 import { track } from "@/lib/track";
-import { ArrowLeft, Banknote, CreditCard, Lock, ShieldCheck, Smartphone, Wallet } from "lucide-react";
+import { AlertCircle, ArrowLeft, Banknote, Check, Copy, CreditCard, ExternalLink, Lock, ShieldCheck, Smartphone, Wallet } from "lucide-react";
 import { useCart } from "@/stores/cart";
 import { useAuth } from "@/stores/auth";
 import { useCurrentSection, getEmptyBagConfig } from "@/stores/section";
@@ -36,6 +36,8 @@ export default function CheckoutPage() {
   const [store, setStore] = useState<StoreInfo | null>(null);
   const [f, setF] = useState<Form>(empty);
   const [method, setMethod] = useState("cod");
+  const [payReference, setPayReference] = useState("");
+  const [copiedPayoneer, setCopiedPayoneer] = useState(false);
   const [errors, setErrors] = useState<Partial<Record<keyof Form, string>>>({});
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -61,6 +63,26 @@ export default function CheckoutPage() {
     setErrors({ ...errors, [k]: undefined });
   };
 
+  const isCityAllowedForCod = (targetCity?: string) => {
+    if (!store?.cod?.enabled) return false;
+    if (store?.cod?.cityRestriction === "all") return true;
+    const allowed = store?.cod?.allowedCities && store.cod.allowedCities.length > 0
+      ? store.cod.allowedCities
+      : ["Karachi"];
+    const c = (targetCity ?? f.city).trim().toLowerCase();
+    if (!c) return true;
+    return allowed.some((city) => city.trim().toLowerCase() === c);
+  };
+
+  const onCityChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const val = e.target.value;
+    setF({ ...f, city: val });
+    setErrors({ ...errors, city: undefined });
+    if (val && !isCityAllowedForCod(val) && method === "cod") {
+      setMethod("payoneer");
+    }
+  };
+
   const validate = () => {
     const e: typeof errors = {};
     if (f.name.trim().length < 2) e.name = "Please enter your full name";
@@ -77,13 +99,18 @@ export default function CheckoutPage() {
     setBusy(true);
     setErr(null);
     try {
+      const combinedNotes = [
+        f.notes?.trim() || null,
+        payReference.trim() ? `Payment Reference: ${payReference.trim()}` : null,
+      ].filter(Boolean).join(" | ");
+
       const r = await api<{ data: { order: Order; payment: { type: string; url?: string; action?: string; fields?: Record<string, string> } } }>("/checkout", {
         method: "POST",
         json: {
           cartId: cart.id,
           customer: { name: f.name, phone: f.phone, email: f.email || undefined },
           address: { city: f.city, area: f.area || undefined, line1: f.line1 },
-          notes: f.notes || undefined,
+          notes: combinedNotes || undefined,
           paymentMethod: method,
           source: "web",
         },
@@ -158,7 +185,7 @@ export default function CheckoutPage() {
             <h2 className="text-lg font-bold">2. Delivery address</h2>
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
               <Field label="City" error={errors.city}>
-                <select className="input" value={f.city} onChange={set("city")} autoComplete="address-level2">
+                <select className="input" value={f.city} onChange={onCityChange} autoComplete="address-level2">
                   <option value="">Select city</option>
                   {(store?.cities ?? []).map((c) => <option key={c}>{c}</option>)}
                 </select>
@@ -170,10 +197,34 @@ export default function CheckoutPage() {
           </section>
 
           <section className="card p-5 sm:p-7">
-            <h2 className="text-lg font-bold">3. Payment</h2>
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-bold">3. Payment</h2>
+              {f.city && !isCityAllowedForCod(f.city) && (
+                <span className="rounded-full bg-amber-500/15 px-2.5 py-0.5 text-[11px] font-semibold text-amber-800 dark:text-amber-300">
+                  Online Payment Required ({f.city})
+                </span>
+              )}
+            </div>
+
+            {f.city && !isCityAllowedForCod(f.city) && (
+              <div className="mt-3.5 flex items-start gap-2.5 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-3.5 text-xs text-amber-900 dark:text-amber-200">
+                <AlertCircle size={16} className="shrink-0 text-amber-600 mt-0.5" />
+                <div>
+                  <p className="font-bold">
+                    {store?.cod?.nonCodNotice || `Cash on Delivery is currently available in Karachi only. Orders for ${f.city} require advance online payment.`}
+                  </p>
+                  <p className="mt-1 text-muted">
+                    Pay securely using Payoneer, Card, or Online Bank Transfer below.
+                  </p>
+                </div>
+              </div>
+            )}
+
             <div className="mt-4 grid gap-2.5">
               {methods.map((m) => {
                 const I = icons[m.kind] ?? Wallet;
+                const isBlockedCod = m.id === "cod" && !!f.city && !isCityAllowedForCod(f.city);
+                const isItemEnabled = m.enabled && !isBlockedCod;
                 const on = method === m.id;
                 return (
                   <label
@@ -181,20 +232,112 @@ export default function CheckoutPage() {
                     className={cn(
                       "flex cursor-pointer items-center gap-3 rounded-2xl border p-4 transition",
                       on ? "border-accent bg-[#f2f4ff] shadow-[0_0_0_3px_rgba(54,83,255,0.12)]" : "border-black/10 bg-white/70",
-                      !m.enabled && "cursor-not-allowed opacity-50",
+                      !isItemEnabled && "cursor-not-allowed opacity-50 bg-black/[0.02]",
                     )}
                   >
-                    <input type="radio" name="pm" className="sr-only" disabled={!m.enabled} checked={on} onChange={() => setMethod(m.id)} />
-                    <span className={cn("grid h-5 w-5 place-items-center rounded-full border-2", on ? "border-accent" : "border-black/25")}>{on && <span className="h-2.5 w-2.5 rounded-full bg-accent" />}</span>
-                    <I size={20} className="text-accent" />
+                    <input
+                      type="radio"
+                      name="pm"
+                      className="sr-only"
+                      disabled={!isItemEnabled}
+                      checked={on}
+                      onChange={() => isItemEnabled && setMethod(m.id)}
+                    />
+                    <span className={cn("grid h-5 w-5 place-items-center rounded-full border-2", on ? "border-accent" : "border-black/25")}>
+                      {on && <span className="h-2.5 w-2.5 rounded-full bg-accent" />}
+                    </span>
+                    <I size={20} className={isBlockedCod ? "text-muted" : "text-accent"} />
                     <span className="flex-1">
-                      <b className="block text-[15px]">{m.name}</b>
-                      <span className="text-[13px] text-muted">{m.enabled ? m.description : "Coming soon"}</span>
+                      <span className="flex items-center gap-2">
+                        <b className="text-[15px]">{m.name}</b>
+                        {isBlockedCod && (
+                          <span className="rounded-full bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 px-2 py-0.5 text-[10.5px] font-bold">
+                            Karachi Only
+                          </span>
+                        )}
+                      </span>
+                      <span className="block text-[13px] text-muted">
+                        {isBlockedCod ? "COD is unavailable in your city. Select Payoneer or Bank Transfer." : m.enabled ? m.description : "Coming soon"}
+                      </span>
                     </span>
                   </label>
                 );
               })}
             </div>
+
+            {/* Payoneer Online Payment Details Box */}
+            {method === "payoneer" && (
+              <div className="mt-4 rounded-2xl border border-accent/20 bg-accent/[0.04] p-4 sm:p-5 space-y-3.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase tracking-wider text-accent flex items-center gap-1.5">
+                    <ShieldCheck size={14} /> {store?.payoneer?.title || "Payoneer & Online Transfer Instructions"}
+                  </span>
+                  {store?.payoneer?.link && (
+                    <a
+                      href={store.payoneer.link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-xs font-bold text-accent hover:underline"
+                    >
+                      Pay Online Now <ExternalLink size={12} />
+                    </a>
+                  )}
+                </div>
+
+                {store?.payoneer?.email && (
+                  <div className="rounded-xl bg-white dark:bg-neutral-800 p-3 border border-line flex items-center justify-between">
+                    <div>
+                      <p className="text-[11px] font-medium text-muted">Payoneer Account Email</p>
+                      <p className="font-mono text-sm font-bold text-ink select-all">{store.payoneer.email}</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard.writeText(store.payoneer?.email || "");
+                        setCopiedPayoneer(true);
+                        setTimeout(() => setCopiedPayoneer(false), 2000);
+                      }}
+                      className="btn btn-secondary h-8 px-2.5 text-xs flex items-center gap-1"
+                    >
+                      {copiedPayoneer ? <Check size={13} className="text-success" /> : <Copy size={13} />}
+                      {copiedPayoneer ? "Copied" : "Copy"}
+                    </button>
+                  </div>
+                )}
+
+                {(store?.payoneer?.bankTitle || store?.payoneer?.bankAccount || store?.payoneer?.bankIban) && (
+                  <div className="rounded-xl bg-white dark:bg-neutral-800 p-3 border border-line text-xs space-y-1">
+                    <p className="font-bold text-ink mb-1">Direct Bank Account Transfer:</p>
+                    {store.payoneer.bankTitle && (
+                      <p className="text-muted"><span className="font-semibold text-ink">Title:</span> {store.payoneer.bankTitle}</p>
+                    )}
+                    {store.payoneer.bankAccount && (
+                      <p className="text-muted"><span className="font-semibold text-ink">Account No:</span> <span className="font-mono select-all font-bold">{store.payoneer.bankAccount}</span></p>
+                    )}
+                    {store.payoneer.bankIban && (
+                      <p className="text-muted"><span className="font-semibold text-ink">IBAN:</span> <span className="font-mono select-all font-bold">{store.payoneer.bankIban}</span></p>
+                    )}
+                  </div>
+                )}
+
+                <p className="text-xs text-muted leading-relaxed">
+                  {store?.payoneer?.instructions || "Transfer your total amount via Payoneer or online bank transfer. After placing the order, you can submit your transaction reference or share the payment screenshot on WhatsApp."}
+                </p>
+
+                <div>
+                  <label className="block text-xs font-semibold text-ink mb-1">
+                    Transaction ID / Payment Reference (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    value={payReference}
+                    onChange={(e) => setPayReference(e.target.value)}
+                    placeholder="e.g. Transaction ID / TID or Sender Name"
+                    className="input w-full text-xs font-mono"
+                  />
+                </div>
+              </div>
+            )}
           </section>
         </div>
 
@@ -228,7 +371,10 @@ export default function CheckoutPage() {
             <Lock size={17} /> {busy ? "Placing order…" : `Place order · ${money(finalTotal)}`}
           </button>
           <p className="flex items-center justify-center gap-1.5 text-center text-xs text-muted">
-            <ShieldCheck size={14} /> No advance payment. We’ll call to confirm your order.
+            <ShieldCheck size={14} />{" "}
+            {method === "cod"
+              ? "No advance payment. We’ll call to confirm your order."
+              : "100% Secure payment. WhatsApp support available for assistance."}
           </p>
         </aside>
       </div>

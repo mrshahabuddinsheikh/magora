@@ -245,11 +245,12 @@ if (!existingTrustSettings) {
 const [existingCodSettings] = await db.select().from(s.codSettings).where(eq(s.codSettings.id, 1));
 if (!existingCodSettings) {
   await db.insert(s.codSettings).values({
-    id: 1,
     enabled: true,
     threshold: 2000,
     feeBelow: 50,
     feeAbove: 100,
+    cityRestriction: "selected_only",
+    allowedCities: JSON.stringify(["Karachi"]),
   });
   console.log("✓ Seeded COD settings");
 }

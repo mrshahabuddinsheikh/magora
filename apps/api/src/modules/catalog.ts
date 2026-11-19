@@ -151,6 +151,23 @@ export async function catalogRoutes(app: FastifyInstance) {
   app.get("/store", { schema: { tags: ["Store"], summary: "Store settings: currency, shipping, cities, payment methods" } }, async (_req, reply) => {
     reply.header("cache-control", CACHE_HEADER);
     const [codSettings, leadCapture, loyalty] = await Promise.all([getCodSettings(), getLeadCaptureSettings(), getLoyaltySettings()]);
+    const methods = paymentMethods().map((m) => {
+      if (m.id === "cod") {
+        return {
+          ...m,
+          enabled: codSettings.enabled,
+        };
+      }
+      if (m.id === "payoneer") {
+        return {
+          ...m,
+          name: codSettings.payoneerTitle || m.name,
+          enabled: codSettings.payoneerEnabled,
+        };
+      }
+      return m;
+    });
+
     return {
       data: {
         ...store,
@@ -160,10 +177,23 @@ export async function catalogRoutes(app: FastifyInstance) {
           threshold: codSettings.threshold,
           feeBelow: codSettings.feeBelow,
           feeAbove: codSettings.feeAbove,
+          cityRestriction: codSettings.cityRestriction,
+          allowedCities: codSettings.allowedCities,
+          nonCodNotice: codSettings.nonCodNotice,
+        },
+        payoneer: {
+          enabled: codSettings.payoneerEnabled,
+          title: codSettings.payoneerTitle,
+          email: codSettings.payoneerEmail,
+          link: codSettings.payoneerLink,
+          instructions: codSettings.payoneerInstructions,
+          bankTitle: codSettings.bankTitle,
+          bankAccount: codSettings.bankAccount,
+          bankIban: codSettings.bankIban,
         },
         leadCapture,
         loyalty,
-        paymentMethods: paymentMethods(),
+        paymentMethods: methods,
       },
     };
   });

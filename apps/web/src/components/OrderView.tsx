@@ -3,7 +3,8 @@
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useEffect, useMemo, useState } from "react";
-import { Check, Circle, Clock, ExternalLink, MapPin, Phone, RotateCcw, Truck, X, PackageCheck, Warehouse, Bike } from "lucide-react";
+import { Check, Circle, Clock, Copy, CreditCard, ExternalLink, MapPin, Phone, RotateCcw, ShieldCheck, Truck, X, PackageCheck, Warehouse, Bike } from "lucide-react";
+import { WHATSAPP } from "@/lib/config";
 import { cn, dateTime, money } from "@/lib/format";
 import { api } from "@/lib/client-api";
 import type { Order, ReturnRequest } from "@/lib/types";
@@ -93,6 +94,11 @@ export function OrderView({ order: o, token, phone, refresh, admin = false }: { 
           </p>
         )}
       </div>
+
+      {/* Payoneer / Advance Payment Action Card */}
+      {o.paymentMethod === "payoneer" && o.paymentStatus !== "paid" && (
+        <PayoneerPaymentCard order={o} onRefresh={refresh} />
+      )}
 
       {/* delivery tracking */}
       {sh && (
@@ -361,5 +367,126 @@ function ReturnForm({ order, token, phone, onDone }: { order: Order; token?: str
       {err && <p className="text-sm text-danger">{err}</p>}
       <button className="btn btn-primary h-11" disabled={busy}>{busy ? "Sending…" : "Submit request"}</button>
     </form>
+  );
+}
+
+function PayoneerPaymentCard({ order, onRefresh }: { order: Order; onRefresh?: () => Promise<void> | void }) {
+  const [refInput, setRefInput] = useState("");
+  const [copied, setCopied] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  const waMessage = encodeURIComponent(
+    `Salam Magora! I have placed Order #${order.number} for Rs. ${order.totals.total}. Here is my online payment screenshot / transaction details.`
+  );
+  const waUrl = `https://wa.me/${WHATSAPP.replace(/\D/g, "")}?text=${waMessage}`;
+
+  const handleSubmitRef = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!refInput.trim()) return;
+    setSubmitting(true);
+    setErr(null);
+    try {
+      await api(`/orders/${order.number}/payment-reference`, {
+        method: "POST",
+        json: { reference: refInput.trim() },
+        auth: false,
+      });
+      setSubmitted(true);
+      await onRefresh?.();
+    } catch (e: any) {
+      setErr(e?.message || "Failed to submit reference. Please share on WhatsApp.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="card overflow-hidden border border-accent/30 bg-gradient-to-br from-white via-[#f8f9ff] to-[#eef2ff] dark:from-neutral-900 dark:via-neutral-900 dark:to-neutral-800 p-5 sm:p-7 shadow-sm">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line pb-4">
+        <div className="flex items-center gap-3">
+          <div className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-accent text-white shadow-md shadow-accent/25">
+            <CreditCard size={20} />
+          </div>
+          <div>
+            <h3 className="font-bold text-base text-ink">Advance Online Payment</h3>
+            <p className="text-xs text-muted">Complete payment to start order processing & dispatch</p>
+          </div>
+        </div>
+        <span className="rounded-full bg-amber-500/15 px-3 py-1 text-xs font-bold text-amber-800 dark:text-amber-300">
+          Awaiting Payment · {money(order.totals.total)}
+        </span>
+      </div>
+
+      <div className="mt-4 grid gap-4 sm:grid-cols-2">
+        <div className="space-y-3">
+          <p className="text-xs text-muted leading-relaxed">
+            Since this order is for <b>{order.address.city}</b>, Cash on Delivery is unavailable. Please transfer <b>{money(order.totals.total)}</b> via Payoneer or Direct Bank Transfer:
+          </p>
+          <div className="rounded-xl border border-line bg-white dark:bg-neutral-800 p-3 text-xs space-y-1.5">
+            <div className="flex items-center justify-between">
+              <span className="font-semibold text-ink">Payoneer / Bank Transfer</span>
+              <button
+                type="button"
+                onClick={() => {
+                  navigator.clipboard.writeText(`Order ${order.number} - Rs. ${order.totals.total}`);
+                  setCopied(true);
+                  setTimeout(() => setCopied(false), 2000);
+                }}
+                className="chip text-[11px] py-0.5 px-2"
+              >
+                {copied ? <Check size={11} className="text-success" /> : <Copy size={11} />} {copied ? "Copied" : "Copy Details"}
+              </button>
+            </div>
+            <p className="text-muted">Total Amount: <span className="font-bold text-ink">{money(order.totals.total)}</span></p>
+            <p className="text-muted">Order Reference: <span className="font-mono font-bold text-ink">{order.number}</span></p>
+          </div>
+
+          <a
+            href={waUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn btn-secondary w-full h-11 text-xs font-bold flex items-center justify-center gap-2 border-emerald-500/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/40"
+          >
+            <span>💬</span> Send Screenshot on WhatsApp
+          </a>
+        </div>
+
+        <div className="rounded-2xl border border-line bg-white/80 dark:bg-neutral-800/80 p-4 space-y-3">
+          <h4 className="font-bold text-xs text-ink uppercase tracking-wider flex items-center gap-1.5">
+            <ShieldCheck size={14} className="text-accent" /> Submit Payment Reference / TID
+          </h4>
+          <p className="text-xs text-muted">
+            Already transferred? Enter your Payoneer Transaction ID or Bank TID so our accounts team can instantly verify it.
+          </p>
+
+          {submitted ? (
+            <div className="rounded-xl bg-emerald-500/15 border border-emerald-500/30 p-3 text-xs font-semibold text-emerald-800 dark:text-emerald-300 flex items-center gap-2">
+              <Check size={16} /> Reference submitted! We will verify and mark your order as Paid shortly.
+            </div>
+          ) : (
+            <form onSubmit={handleSubmitRef} className="space-y-2">
+              {err && <p className="text-xs text-rose-600 font-semibold">{err}</p>}
+              <input
+                type="text"
+                required
+                value={refInput}
+                onChange={(e) => setRefInput(e.target.value)}
+                placeholder="e.g. TID 123456789 or Payoneer Ref"
+                className="input w-full text-xs font-mono h-10"
+              />
+              <button
+                type="submit"
+                disabled={submitting}
+                className="btn btn-primary w-full h-10 text-xs font-bold"
+              >
+                {submitting ? "Submitting..." : "Submit Payment Reference"}
+              </button>
+            </form>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }

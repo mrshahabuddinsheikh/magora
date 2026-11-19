@@ -198,6 +198,11 @@ export function FastCodModal({
                 </button>
               ))}
             </div>
+            {city.toLowerCase() !== "karachi" && (
+              <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-2.5 text-xs text-amber-900 dark:text-amber-200">
+                <span className="font-bold">⚠️ Notice for {city}:</span> Cash on Delivery is currently available in Karachi only. Your order for {city} will be confirmed via Online Payment (Payoneer / Card / Bank Transfer).
+              </div>
+            )}
             <input
               type="text"
               required
@@ -240,15 +245,21 @@ export function FastCodModal({
             >
               {submitting ? (
                 "Booking your order..."
-              ) : (
+              ) : city.toLowerCase() === "karachi" ? (
                 <>
                   <Lock size={15} /> Confirm Order · Pay {money(total)} on Delivery
+                </>
+              ) : (
+                <>
+                  <Lock size={15} /> Confirm Order · Online Payment ({money(total)})
                 </>
               )}
             </button>
             <p className="mt-2 text-center text-[11px] text-muted flex items-center justify-center gap-1.5">
               <ShieldCheck size={13} className="text-emerald-500" />
-              Pay rider when you receive the parcel · 7-day easy exchange
+              {city.toLowerCase() === "karachi"
+                ? "Pay rider when you receive the parcel · 7-day easy exchange"
+                : `100% Secure payment · Fast tracked delivery to ${city}`}
             </p>
           </div>
         </form>

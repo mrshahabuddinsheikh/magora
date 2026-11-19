@@ -134,7 +134,27 @@ export interface StoreInfo {
   name: string; tagline: string; currency: string; currencySymbol: string;
   supportPhone: string; supportWhatsapp: string; supportEmail: string;
   shipping: { flatRate: number; freeAbove: number; etaDays: string; etaByCity?: Record<string, [number, number]>; etaDefault?: [number, number] };
-  cod: { enabled: boolean; fee: number; maxOrderTotal: number; threshold?: number; feeBelow?: number; feeAbove?: number };
+  cod: {
+    enabled: boolean;
+    fee: number;
+    maxOrderTotal: number;
+    threshold?: number;
+    feeBelow?: number;
+    feeAbove?: number;
+    cityRestriction?: string;
+    allowedCities?: string[];
+    nonCodNotice?: string;
+  };
+  payoneer?: {
+    enabled: boolean;
+    title?: string;
+    email?: string;
+    link?: string;
+    instructions?: string;
+    bankTitle?: string;
+    bankAccount?: string;
+    bankIban?: string;
+  };
   leadCapture?: LeadCaptureConfig;
   loyalty?: LoyaltyConfig;
   returnsDays: number; cities: string[]; paymentMethods: PaymentMethod[];

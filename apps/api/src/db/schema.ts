@@ -660,6 +660,17 @@ export const codSettings = mysqlTable("cod_settings", {
   threshold: int("threshold").notNull().default(2000), // Rs. 2,000
   feeBelow: int("fee_below").notNull().default(50),     // Rs. 50 if order amount < threshold
   feeAbove: int("fee_above").notNull().default(100),    // Rs. 100 if order amount >= threshold
+  cityRestriction: varchar("city_restriction", { length: 32 }).notNull().default("selected_only"), // "all" | "selected_only"
+  allowedCities: text("allowed_cities").notNull().default('["Karachi"]'), // JSON string e.g. '["Karachi"]'
+  nonCodNotice: text("non_cod_notice"),
+  payoneerEnabled: boolean("payoneer_enabled").notNull().default(true),
+  payoneerTitle: varchar("payoneer_title", { length: 255 }).default("Payoneer / Card / Online Transfer"),
+  payoneerEmail: varchar("payoneer_email", { length: 255 }).default(""),
+  payoneerLink: varchar("payoneer_link", { length: 500 }).default(""),
+  payoneerInstructions: text("payoneer_instructions"),
+  bankTitle: varchar("bank_title", { length: 255 }).default(""),
+  bankAccount: varchar("bank_account", { length: 255 }).default(""),
+  bankIban: varchar("bank_iban", { length: 255 }).default(""),
 });
 
 /* ───────────── Lead Capture Popup & Floating Pill Settings ───────────── */

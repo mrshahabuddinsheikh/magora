@@ -8,7 +8,7 @@ import type { BrandWithModels, Paged, Product, ProductListItem, StoreInfo } from
  * Failed requests are never cached, preventing dead/empty page bugs.
  */
 async function get<T>(path: string, tags?: string[], revalidate = 60): Promise<T | null> {
-  for (let attempt = 1; attempt <= 2; attempt++) {
+  for (let attempt = 1; attempt <= 3; attempt++) {
     try {
       const res = await fetch(`${API_URL}${path}`, {
         headers: { accept: "application/json" },
@@ -18,10 +18,15 @@ async function get<T>(path: string, tags?: string[], revalidate = 60): Promise<T
         },
       });
       if (res.ok) return (await res.json()) as T;
+      if (res.status === 404 && attempt < 2) {
+        // Brief retry in case of cold-start route registration
+        await new Promise((r) => setTimeout(r, 200));
+        continue;
+      }
       if (res.status === 404) return null; // Genuine 404
     } catch {
-      if (attempt < 2) {
-        await new Promise((r) => setTimeout(r, 300));
+      if (attempt < 3) {
+        await new Promise((r) => setTimeout(r, 300 * attempt));
         continue;
       }
     }

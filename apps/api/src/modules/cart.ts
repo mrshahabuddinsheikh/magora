@@ -61,7 +61,28 @@ export function shippingFor(subtotalAfterDiscount: number, freeShipping: boolean
 export async function getCodSettings(tx: Tx = db) {
   try {
     const [row] = await tx.select().from(s.codSettings).where(eq(s.codSettings.id, 1));
-    if (row) return row;
+    if (row) {
+      let allowedCities: string[] = ["Karachi"];
+      try {
+        if (row.allowedCities) {
+          allowedCities = typeof row.allowedCities === "string" ? JSON.parse(row.allowedCities) : row.allowedCities;
+        }
+      } catch {}
+      return {
+        ...row,
+        cityRestriction: row.cityRestriction || "selected_only",
+        allowedCities: Array.isArray(allowedCities) && allowedCities.length > 0 ? allowedCities : ["Karachi"],
+        nonCodNotice: row.nonCodNotice || "Cash on Delivery is only available in Karachi. Orders from other cities require online payment.",
+        payoneerEnabled: row.payoneerEnabled ?? true,
+        payoneerTitle: row.payoneerTitle || "Payoneer / Card / Online Transfer",
+        payoneerEmail: row.payoneerEmail || "",
+        payoneerLink: row.payoneerLink || "",
+        payoneerInstructions: row.payoneerInstructions || "Pay via Payoneer or online transfer. Share your transaction ID or receipt screenshot on WhatsApp after placing order.",
+        bankTitle: row.bankTitle || "",
+        bankAccount: row.bankAccount || "",
+        bankIban: row.bankIban || "",
+      };
+    }
   } catch {}
   return {
     id: 1,
@@ -69,6 +90,17 @@ export async function getCodSettings(tx: Tx = db) {
     threshold: 2000,
     feeBelow: 50,
     feeAbove: 100,
+    cityRestriction: "selected_only",
+    allowedCities: ["Karachi"],
+    nonCodNotice: "Cash on Delivery is only available in Karachi. Orders from other cities require online payment.",
+    payoneerEnabled: true,
+    payoneerTitle: "Payoneer / Card / Online Transfer",
+    payoneerEmail: "",
+    payoneerLink: "",
+    payoneerInstructions: "Pay via Payoneer or online transfer. Share your transaction ID or receipt screenshot on WhatsApp after placing order.",
+    bankTitle: "",
+    bankAccount: "",
+    bankIban: "",
   };
 }
 

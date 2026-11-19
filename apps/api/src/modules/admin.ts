@@ -1801,7 +1801,7 @@ export async function adminRoutes(app: FastifyInstance) {
     },
   );
 
-  /* COD settings (tiered handling fee) */
+  /* COD & Payment Gateway settings */
   app.get("/cod-settings", { schema: { tags, security } }, async () => {
     const settings = await getCodSettings();
     return { data: settings };
@@ -1818,29 +1818,69 @@ export async function adminRoutes(app: FastifyInstance) {
           threshold: Type.Integer({ minimum: 0 }),
           feeBelow: Type.Integer({ minimum: 0 }),
           feeAbove: Type.Integer({ minimum: 0 }),
+          cityRestriction: Type.Optional(Type.String()),
+          allowedCities: Type.Optional(Type.Array(Type.String())),
+          nonCodNotice: Type.Optional(Type.String()),
+          payoneerEnabled: Type.Optional(Type.Boolean()),
+          payoneerTitle: Type.Optional(Type.String()),
+          payoneerEmail: Type.Optional(Type.String()),
+          payoneerLink: Type.Optional(Type.String()),
+          payoneerInstructions: Type.Optional(Type.String()),
+          bankTitle: Type.Optional(Type.String()),
+          bankAccount: Type.Optional(Type.String()),
+          bankIban: Type.Optional(Type.String()),
         }),
       },
     },
     async (req) => {
-      const { enabled, threshold, feeBelow, feeAbove } = req.body as {
+      const b = req.body as {
         enabled: boolean;
         threshold: number;
         feeBelow: number;
         feeAbove: number;
+        cityRestriction?: string;
+        allowedCities?: string[];
+        nonCodNotice?: string;
+        payoneerEnabled?: boolean;
+        payoneerTitle?: string;
+        payoneerEmail?: string;
+        payoneerLink?: string;
+        payoneerInstructions?: string;
+        bankTitle?: string;
+        bankAccount?: string;
+        bankIban?: string;
       };
+
+      const cityRestriction = b.cityRestriction || "selected_only";
+      const allowedCities = Array.isArray(b.allowedCities) && b.allowedCities.length > 0 ? b.allowedCities : ["Karachi"];
+      const allowedCitiesJson = JSON.stringify(allowedCities);
+
+      const updateData = {
+        enabled: b.enabled,
+        threshold: b.threshold,
+        feeBelow: b.feeBelow,
+        feeAbove: b.feeAbove,
+        cityRestriction,
+        allowedCities: allowedCitiesJson,
+        nonCodNotice: b.nonCodNotice || null,
+        payoneerEnabled: b.payoneerEnabled ?? true,
+        payoneerTitle: b.payoneerTitle || "Payoneer / Card / Online Transfer",
+        payoneerEmail: b.payoneerEmail || "",
+        payoneerLink: b.payoneerLink || "",
+        payoneerInstructions: b.payoneerInstructions || null,
+        bankTitle: b.bankTitle || "",
+        bankAccount: b.bankAccount || "",
+        bankIban: b.bankIban || "",
+      };
+
       const [existing] = await db.select().from(s.codSettings).where(eq(s.codSettings.id, 1));
       if (existing) {
-        await db
-          .update(s.codSettings)
-          .set({ enabled, threshold, feeBelow, feeAbove })
-          .where(eq(s.codSettings.id, 1));
+        await db.update(s.codSettings).set(updateData).where(eq(s.codSettings.id, 1));
       } else {
-        await db
-          .insert(s.codSettings)
-          .values({ id: 1, enabled, threshold, feeBelow, feeAbove });
+        await db.insert(s.codSettings).values({ id: 1, ...updateData });
       }
       invalidate("store");
-      return { data: { id: 1, enabled, threshold, feeBelow, feeAbove } };
+      return { data: { id: 1, ...updateData, allowedCities } };
     },
   );
 

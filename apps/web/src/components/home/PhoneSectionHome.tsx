@@ -20,17 +20,65 @@ export interface PhoneSectionCopy {
   cta: { title: string; text: string; label: string };
 }
 
+const FALLBACK_BRANDS = [
+  {
+    name: "Apple",
+    slug: "apple",
+    models: [
+      { name: "iPhone 16 Pro Max", slug: "iphone-16-pro-max" },
+      { name: "iPhone 16 Pro", slug: "iphone-16-pro" },
+      { name: "iPhone 16", slug: "iphone-16" },
+      { name: "iPhone 15 Pro Max", slug: "iphone-15-pro-max" },
+      { name: "iPhone 15 Pro", slug: "iphone-15-pro" },
+      { name: "iPhone 14 Pro Max", slug: "iphone-14-pro-max" },
+    ],
+  },
+  {
+    name: "Samsung",
+    slug: "samsung",
+    models: [
+      { name: "Galaxy S24 Ultra", slug: "samsung-s24-ultra" },
+      { name: "Galaxy S24 Plus", slug: "samsung-s24-plus" },
+      { name: "Galaxy S24", slug: "samsung-s24" },
+      { name: "Galaxy S23 Ultra", slug: "samsung-s23-ultra" },
+      { name: "Galaxy Z Fold 6", slug: "samsung-z-fold-6" },
+    ],
+  },
+  {
+    name: "Google Pixel",
+    slug: "google-pixel",
+    models: [
+      { name: "Pixel 9 Pro XL", slug: "pixel-9-pro-xl" },
+      { name: "Pixel 9 Pro", slug: "pixel-9-pro" },
+      { name: "Pixel 9", slug: "pixel-9" },
+      { name: "Pixel 8 Pro", slug: "pixel-8-pro" },
+    ],
+  },
+];
+
+const FALLBACK_HERO_PRODUCTS: HeroProduct[] = [
+  { slug: "matte-black-skin", name: "Matte Stealth Black Skin", material: "skin-solid", price: 1499, colors: [{ id: 1, name: "Stealth Black", hex: "#1c1d1f" }] },
+  { slug: "carbon-fiber-skin", name: "3D Textured Carbon Fiber Skin", material: "skin-carbon", price: 1699, colors: [{ id: 2, name: "Carbon Fiber", hex: "#111111" }] },
+  { slug: "white-marble-skin", name: "Carrara White Marble Skin", material: "skin-marble", price: 1799, colors: [{ id: 3, name: "White Marble", hex: "#f0f2f5" }] },
+];
+
+const FALLBACK_HERO_SPEC = { width: 77.6, height: 163.0, depth: 8.25, cornerRadius: 21, camera: { x: 19.5, y: 130.5, w: 38.5, h: 38.5, r: 10 } };
+
 /** Home page of a phone-fitted shop (skins, screen protectors) — same layout language as the cases home. */
 export async function PhoneSectionHome({ section, copy }: { section: CategoryDef; copy: PhoneSectionCopy }) {
-  const [list, brands] = await Promise.all([getProducts({ category: section.slug, limit: 12 }), getBrands()]);
+  const [list, brandsRes] = await Promise.all([getProducts({ category: section.slug, limit: 12 }), getBrands()]);
+  const brands = brandsRes && brandsRes.length > 0 ? brandsRes : FALLBACK_BRANDS;
   const heroSlugs = list.data.filter((p) => p.material !== "skin-custom").slice(0, 5).map((p) => p.slug);
   const heroData = (await Promise.all(heroSlugs.map((s) => getProduct(s)))).filter((p) => p !== null);
-  const heroProducts: HeroProduct[] = heroData.map((p) => ({ slug: p.slug, name: p.name, material: p.material, price: p.minPrice, colors: p.colors }));
+  const heroProducts: HeroProduct[] = heroData.length > 0
+    ? heroData.map((p) => ({ slug: p.slug, name: p.name, material: p.material, price: p.minPrice, colors: p.colors }))
+    : FALLBACK_HERO_PRODUCTS;
   const heroModel =
     heroData[0]?.models.find((m) => m.isHero) ??
     heroData[0]?.models.find((m) => m.popular) ??
-    heroData[0]?.models.find((m) => m.slug === "iphone-18-pro-max") ??
-    heroData[0]?.models[0];
+    heroData[0]?.models.find((m) => m.slug === "iphone-16-pro-max") ??
+    heroData[0]?.models[0] ??
+    { name: "iPhone 16 Pro Max", slug: "iphone-16-pro-max", spec: FALLBACK_HERO_SPEC };
   const best = list.data.slice(0, 4);
   const shop = `/shop?category=${section.slug}`;
 
@@ -60,11 +108,7 @@ export async function PhoneSectionHome({ section, copy }: { section: CategoryDef
           </div>
         </div>
         <div className="min-w-0">
-          {heroModel && heroProducts.length > 0 ? (
-            <HeroStage products={heroProducts} spec={heroModel.spec} modelName={heroModel.name} modelSlug={heroModel.slug} />
-          ) : (
-            <div className="glass grid h-[420px] place-items-center rounded-[32px] text-muted sm:h-[520px]">Start the API to load products</div>
-          )}
+          <HeroStage products={heroProducts} spec={heroModel.spec} modelName={heroModel.name} modelSlug={heroModel.slug} />
         </div>
       </section>
 
